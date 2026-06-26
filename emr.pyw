@@ -2683,7 +2683,7 @@ def main():
             pyautogui.press('tab')
             pyautogui.typewrite(diagnosaKeperawatan)
 
-            if alergi_INPUT == '' or alergi_INPUT == '-' :
+            if alergi_INPUT.get() == '' or alergi_INPUT.get() == '-' :
                 pyautogui.press('tab')
                 pyautogui.press('tab')
             else :
