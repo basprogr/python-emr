@@ -3252,9 +3252,9 @@ def main():
     def partial_askep(opt):
         time.sleep(2)
         if opt == 'd' :
-            akrid
+            akrid()
         if opt == 'g' :
-            akrig            
+            akrig()         
         messagebox.showinfo('Notifikasi', "Lanjutkan diagnosa?")  
         time.sleep(2)
         diagnose()  
