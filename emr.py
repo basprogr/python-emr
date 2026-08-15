@@ -63,13 +63,26 @@ def notify(msg):
     if not messagebox.askokcancel("Notifikasi", msg):
         sys.exit()  
  
-def checkPassword():
+# def checkPassword():
+#     password_set = "asdasd"
+#     if password_entry.get() == password_set: 
+#         root.destroy() 
+#         main()
+#     else:
+#         messagebox.showerror('Error', 'invalid passcode') 
+
+def checkPassword(*args):
     password_set = "asdasd"
-    if password_entry.get() == password_set: 
-        root.destroy() 
-        main()
-    else:
-        messagebox.showerror('Error', 'invalid passcode') 
+    current_input = password_var.get()
+
+    # Hanya jalankan pengecekan jika panjang karakter sudah mencapai 6 huruf
+    if len(current_input) == 6:
+        if current_input == password_set:
+            root.destroy()
+            main()
+        else:
+            messagebox.showerror("Error", "invalid passcode")
+            password_var.set("")  # Kosongkan kotak input jika password salah
  
 def main():   
     def scan(opt):      
@@ -3611,11 +3624,23 @@ root = tk.Tk()
 root.title('?')
 root.after(10000, root.destroy)
   
-password_entry = tk.Entry(root, width='10', show="*")
-password_entry.grid(row=0, column=0)
-password_entry.focus_set()
+# password_entry = tk.Entry(root, width='10', show="*")
+# password_entry.grid(row=0, column=0)
+# password_entry.focus_set()
 
-submit = tk.Button(root, width='5', text='run', command=checkPassword)
-submit.grid(row=0, column=1)
+# submit = tk.Button(root, width='5', text='run', command=checkPassword)
+# submit.grid(row=0, column=1)
+
+
+# 1. Variable penampung teks
+password_var = tk.StringVar()
+
+# 2. Trigger fungsi checkPassword setiap kali teks berubah
+password_var.trace_add("write", checkPassword)
+
+# 3. Entry widget
+password_entry = tk.Entry(root, textvariable=password_var, show="*")
+password_entry.pack(padx=20, pady=20)
+password_entry.focus()
 
 root.mainloop() 
