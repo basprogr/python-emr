@@ -215,7 +215,14 @@ def main():
                 tx = re.search(r"PLAN OF\s*CARE\s*\)\s*(.*?)\s*Konsultasi Dokter", text_tabel, re.DOTALL)  
                 if tx: 
                     lines = tx.group(1).strip().splitlines() 
-                    cleaned_lines = [f"- {re.sub(r'^[-\s]+', '', line)}" for line in lines if not re.search(r'mrs', line, re.IGNORECASE)] 
+                    # cleaned_lines = [f"- {re.sub(r'^[-\s]+', '', line)}" for line in lines if not re.search(r'mrs', line, re.IGNORECASE)] 
+                    
+                    cleaned_lines = [
+                        f"- {subbed_line}"
+                        for line in lines
+                        if not re.search(r"mrs", line, re.IGNORECASE)
+                        for subbed_line in [re.sub(r"^[-\s]+", "", line)]
+                    ]
                     result = "\n".join(cleaned_lines) 
                     terapi_INPUT.delete("1.0", tk.END)
                     terapi_INPUT.insert(tk.END, result) 
