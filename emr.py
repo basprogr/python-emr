@@ -81,8 +81,7 @@ def checkPassword(*args):
             root.destroy()
             main()
         else:
-            messagebox.showerror("Error", "invalid passcode")
-            password_var.set("")  # Kosongkan kotak input jika password salah
+            pass
  
 def main():   
     def scan(opt):      
