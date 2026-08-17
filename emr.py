@@ -1,42 +1,42 @@
-import subprocess
-import sys
+# import subprocess
+# import sys
  
-DEPENDENCIES = {
-    "pdfplumber": "pdfplumber",
-    "pyautogui": "pyautogui",
-    "pyperclip": "pyperclip",
-    "qrcode": "qrcode",
-    "tkinter": "tk", 
-    "PIL": "pillow"  
-}
+# DEPENDENCIES = {
+#     "pdfplumber": "pdfplumber",
+#     "pyautogui": "pyautogui",
+#     "pyperclip": "pyperclip",
+#     "qrcode": "qrcode",
+#     "tkinter": "tk", 
+#     "PIL": "pillow"  
+# }
 
-def check_and_install_dependencies():
-    print("=[ Memulai Pengecekan Dependensi ]=")
+# def check_and_install_dependencies():
+#     print("=[ Memulai Pengecekan Dependensi ]=")
     
-    for module_name, pip_name in DEPENDENCIES.items():
-        try:
-            # Coba import modul untuk mengecek apakah sudah terinstal
-            __import__(module_name)
-            print(module_name)
-            print(f"  [✓] {module_name} sudah terinstal.")
-        except ImportError:
-            # Jika belum ada, lakukan instalasi
-            print(f"  [!] {module_name} BELUM terinstal.")
-            print(f"  [>] Sedang menginstal {pip_name} via pip... Mohon tunggu.")
+#     for module_name, pip_name in DEPENDENCIES.items():
+#         try:
+#             # Coba import modul untuk mengecek apakah sudah terinstal
+#             __import__(module_name)
+#             print(module_name)
+#             print(f"  [✓] {module_name} sudah terinstal.")
+#         except ImportError:
+#             # Jika belum ada, lakukan instalasi
+#             print(f"  [!] {module_name} BELUM terinstal.")
+#             print(f"  [>] Sedang menginstal {pip_name} via pip... Mohon tunggu.")
             
-            try:
-                # Menjalankan perintah pip install
-                subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
-                print(f"  [✓] Berhasil menginstal {pip_name}!")
-            except subprocess.CalledProcessError as e:
-                print(f"  [X] Gagal menginstal {pip_name}. Error: {e}")
-                print("Program dihentikan karena dependensi tidak terpenuhi.")
-                sys.exit(1)
+#             try:
+#                 # Menjalankan perintah pip install
+#                 subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
+#                 print(f"  [✓] Berhasil menginstal {pip_name}!")
+#             except subprocess.CalledProcessError as e:
+#                 print(f"  [X] Gagal menginstal {pip_name}. Error: {e}")
+#                 print("Program dihentikan karena dependensi tidak terpenuhi.")
+#                 sys.exit(1)
                 
-    print("=[ Semua Dependensi Siap! Menjalankan Program Utama... ]=\n")
+#     print("=[ Semua Dependensi Siap! Menjalankan Program Utama... ]=\n")
 
-# Jalankan fungsi pengecekan sebelum import library lainnya
-check_and_install_dependencies()
+# # Jalankan fungsi pengecekan sebelum import library lainnya
+# check_and_install_dependencies()
  
 import os
 import pdfplumber  

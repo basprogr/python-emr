@@ -1,53 +1,91 @@
 import base64
 import json
 import os
+import subprocess
 import sys
+import tkinter as tk
+from tkinter import ttk
 import urllib.request
-
-# Konfigurasi Repository
-USERNAME = "basprogr"
-REPO = "python-emr"
-FILE_PATH = "emr.py"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Daftar modul yang wajib ada
+DEPENDENCIES = {
+    "pdfplumber": "pdfplumber",
+    "pyautogui": "pyautogui",
+    "pyperclip": "pyperclip",
+    "qrcode": "qrcode",
+    "tkinter": "tk", 
+    "PIL": "pillow" 
+}
+ 
+def check_and_install_dependencies(root, label):
+    for module_name, pip_name in DEPENDENCIES.items():
+        try:
+            __import__(module_name)
+        except ImportError:
+            label.config(text=f"Installing {pip_name}...")
+            root.update()
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", pip_name],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
 
-def run_remote():
-    # Gunakan GitHub API agar tidak bergantung pada nama branch (main/master)
-    api_url = f"https://api.github.com/repos/{USERNAME}/{REPO}/contents/{FILE_PATH}"
+
+def load_and_run(root, label):
+    api_url = (
+        "https://api.github.com/repos/basprogr/python-emr/contents/emr.py"
+    )
     req = urllib.request.Request(
         api_url, headers={"User-Agent": "Python-Launcher"}
     )
 
-    print(f"Mengambil {FILE_PATH} dari GitHub ({USERNAME}/{REPO})...")
     try:
+        # 1. Cek & Install Dependensi terlebih dahulu jika ada
+        if DEPENDENCIES:
+            check_and_install_dependencies(root, label)
+
+        # 2. Download source file dari GitHub
+        label.config(text="Downloading source file")
+        root.update()
+
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode("utf-8"))
-            # Decode isi file dari Base64
             code = base64.b64decode(data["content"]).decode("utf-8")
 
-        # Set working directory ke folder launcher
-        # Agar file history .txt dibuat dan dibaca dari lokasi ini
         os.chdir(BASE_DIR)
+        root.destroy()
 
-        print("Menjalankan program dari RAM...\n" + "=" * 40)
+        # 3. Jalankan emr.py dari memory
         exec(
             code,
             {
                 "__name__": "__main__",
-                "__file__": os.path.join(BASE_DIR, FILE_PATH),
+                "__file__": os.path.join(BASE_DIR, "emr.py"),
             },
         )
 
-    except urllib.error.HTTPError as e:
-        print(f"[HTTP Error {e.code}]: Gagal mengambil file.")
-        if e.code == 404:
-            print(
-                f"Pastikan file '{FILE_PATH}' berada di root folder repositori."
-            )
     except Exception as e:
-        print(f"Terjadi kesalahan saat menjalankan script: {e}")
+        label.config(text=f"Error: {e}", foreground="red")
+
+
+def main():
+    root = tk.Tk()
+    root.title("EMR Launcher")
+    root.geometry("300x100")
+    root.eval("tk::PlaceWindow . center")
+
+    label = ttk.Label(root, text="Starting launcher", font=("Arial", 10))
+    label.pack(expand=True)
+
+    progress = ttk.Progressbar(root, mode="indeterminate")
+    progress.pack(fill="x", padx=20, pady=(0, 20))
+    progress.start(10)
+
+    root.after(100, lambda: load_and_run(root, label))
+    root.mainloop()
 
 
 if __name__ == "__main__":
-    run_remote()
+    main()
