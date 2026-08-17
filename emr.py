@@ -4,17 +4,18 @@ import pyautogui
 import pyperclip
 import qrcode
 import re  
+import requests
 import sys
 import time 
 import tkinter as tk    
-import urllib.parse
+import urllib.parse 
 from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import messagebox, ttk 
 from PIL import ImageTk, Image
 
-from datetime import datetime, timedelta
  
+  
 currentDate = datetime.now().strftime("%Y-%m-%d")
 yesterday = datetime.now() - timedelta(days=1)
 previousDate = yesterday.strftime("%Y-%m-%d") 
@@ -2850,7 +2851,7 @@ def main():
 
     def vitalSignBackUp(): 
         try:
-            data = vitalSignInput.get("1.0", tk.END) 
+            data = txa_vitalSign.get("1.0", tk.END) 
             with open(backUpPath, "w", encoding="utf-8") as f:
                 f.write(data) 
         except Exception as e:
@@ -2866,8 +2867,8 @@ def main():
             with open(backUpPath, "r", encoding="utf-8") as f:
                 file_content = f.read().strip() 
             
-            vitalSignInput.delete("1.0", tk.END)
-            vitalSignInput.insert("1.0", file_content)  
+            txa_vitalSign.delete("1.0", tk.END)
+            txa_vitalSign.insert("1.0", file_content)  
             
         except FileNotFoundError:
             messagebox.showwarning("Warning", "File ttv.txt tidak ditemukan di direktori script.")
@@ -2885,7 +2886,7 @@ def main():
         generateButton.config(text="Formatting ...", state="disabled")
         app.update_idletasks()
         try: 
-            input_text = vitalSignInput.get("1.0", tk.END).strip() 
+            input_text = txa_vitalSign.get("1.0", tk.END).strip() 
             if not input_text:
                 generateButton.config(text="Generate", state="normal")
                 return  
@@ -2898,8 +2899,8 @@ def main():
                 complete_parts = [parts[i] if i < len(parts) else defaults[i] for i in range(8)]
                 processed_lines.append("-".join(complete_parts)) 
             final_output = "\n".join(processed_lines) 
-            vitalSignInput.delete("1.0", tk.END) 
-            vitalSignInput.insert("1.0", final_output)  
+            txa_vitalSign.delete("1.0", tk.END) 
+            txa_vitalSign.insert("1.0", final_output)  
             time.sleep(0.5)  
             generateButton.config(text="Creating backup data ...", state="disabled")
             app.update_idletasks() 
@@ -2908,7 +2909,7 @@ def main():
         except Exception as e: 
             messagebox.showerror("Error", f"{e}") 
         finally:
-            input_text = vitalSignInput.get("1.0", tk.END).strip()
+            input_text = txa_vitalSign.get("1.0", tk.END).strip()
             lines = input_text.split('\n')  
             for widget in routineFieldset.winfo_children():
                 widget.destroy() 
@@ -3334,7 +3335,60 @@ def main():
             
         except Exception as e:
             messagebox.showerror("Error", f"Gagal membuat QR Code: {e}")
+  
+    SUPABASE_URL = "https://qjwmhtnfowkmwoflwhzy.supabase.co" 
+    SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqd21odG5mb3drbXdvZmx3aHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NjAwMTIsImV4cCI6MjEwMjUzNjAxMn0.ERWHxYn3GJJKHXJaJaZ2vnypcEM0DF8QE4DR_mjF-3s"
  
+    def fetchRoomFromDatabase(): 
+        today_str = datetime.now().strftime("%Y%m%d") 
+        url = f"{SUPABASE_URL}/rest/v1/logbook"
+ 
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        # Parameter query (Hanya ambil kolom 'room', filter berdasarkan tanggal, urutkan A-Z)
+        params = {
+            "select": "room",
+            "created_at": f"eq.{today_str}",
+            "order": "room.asc",
+        }
+
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()  # Hasil berupa list json, misal: [{'room': '301-A'}, {'room': '302-A'}]
+
+                # Bersihkan isi Text Widget
+                txa_vitalSign.delete("1.0", tk.END)
+
+                if not data:
+                    txa_vitalSign.insert(
+                        tk.END, f"Belum ada data ruangan untuk hari ini ({today_str})"
+                    )
+                    return
+
+                # Format daftar ruangan menjadi baris per baris
+                room_list = [item["room"] for item in data if "room" in item]
+                formatted_text = "\n".join(room_list)
+
+                # Tampilkan ke dalam txa_vitalSign
+                txa_vitalSign.insert(tk.END, formatted_text)
+
+            else:
+                txa_vitalSign.delete("1.0", tk.END)
+                txa_vitalSign.insert(
+                    tk.END, f"Gagal mengambil data! (Error Code: {response.status_code})"
+                )
+
+        except Exception as e:
+            txa_vitalSign.delete("1.0", tk.END)
+            txa_vitalSign.insert(tk.END, f"Error Koneksi: {e}")
+        
+    
     # ========== Main apps GUI ==========
  
     app = tk.Tk()
@@ -3357,14 +3411,16 @@ def main():
 
     # ========== Tab 1 : Routine ========== 
 
-    vitalSignFieldset = ttk.LabelFrame(tab1, text=" Vital Signs ")
-    vitalSignFieldset.pack(fill='x', padx=5, pady=5) 
-    vitalSignInput = tk.Text(vitalSignFieldset, width=30, height=10, font=(ff, fs))
-    vitalSignInput.pack(fill='x', padx=5)
-     
-    loadButton = tk.Button(vitalSignFieldset, text="Load", font=(ff, fs), command=vitalSignLoad)
+    fset_vitalSign = ttk.LabelFrame(tab1, text=" Vital Signs ")
+    fset_vitalSign.pack(fill='x', padx=5, pady=5) 
+    txa_vitalSign = tk.Text(fset_vitalSign, width=30, height=10, font=(ff, fs))
+    txa_vitalSign.pack(fill='x', padx=5)
+
+    btn_fetch = tk.Button(fset_vitalSign, text="fetch", font=(ff, fs), command=fetchRoomFromDatabase)
+    btn_fetch.pack(side=tk.LEFT, padx='1') 
+    loadButton = tk.Button(fset_vitalSign, text="Load", font=(ff, fs), command=vitalSignLoad)
     loadButton.pack(side=tk.LEFT, padx='1')
-    generateButton = tk.Button(vitalSignFieldset, text="Generate", font=(ff, fs), command=generate_buttons)
+    generateButton = tk.Button(fset_vitalSign, text="Generate", font=(ff, fs), command=generate_buttons)
     generateButton.pack(side=tk.LEFT, padx='1')
 
     routineFieldset = ttk.LabelFrame(tab1, text=" Routine ")
