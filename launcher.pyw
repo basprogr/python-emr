@@ -8,8 +8,7 @@ from tkinter import ttk
 import urllib.request
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Daftar modul yang wajib ada
+  
 DEPENDENCIES = {
     "pdfplumber": "pdfplumber",
     "pyautogui": "pyautogui",
@@ -31,9 +30,8 @@ def check_and_install_dependencies(root, label):
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-
-
-def load_and_run(root, label):
+ 
+def load_and_run(root, label, progress):
     api_url = (
         "https://api.github.com/repos/basprogr/python-emr/contents/emr.py"
     )
@@ -42,12 +40,12 @@ def load_and_run(root, label):
     )
 
     try:
-        # 1. Cek & Install Dependensi terlebih dahulu jika ada
+        # 1. Cek Dependensi
         if DEPENDENCIES:
             check_and_install_dependencies(root, label)
 
-        # 2. Download source file dari GitHub
-        label.config(text="Downloading source file")
+        # 2. Download source file dari GitHub API
+        label.config(text="Downloading source file...")
         root.update()
 
         with urllib.request.urlopen(req) as response:
@@ -55,9 +53,12 @@ def load_and_run(root, label):
             code = base64.b64decode(data["content"]).decode("utf-8")
 
         os.chdir(BASE_DIR)
+
+        # Hentikan animasi progress bar terlebih dahulu agar tidak error saat destroy
+        progress.stop()
         root.destroy()
 
-        # 3. Jalankan emr.py dari memory
+        # 3. Eksekusi emr.py dari RAM
         exec(
             code,
             {
@@ -67,6 +68,7 @@ def load_and_run(root, label):
         )
 
     except Exception as e:
+        progress.stop()  # Hentikan animasi jika ada error
         label.config(text=f"Error: {e}", foreground="red")
 
 
@@ -76,14 +78,15 @@ def main():
     root.geometry("300x100")
     root.eval("tk::PlaceWindow . center")
 
-    label = ttk.Label(root, text="Starting launcher", font=("Arial", 10))
+    label = ttk.Label(root, text="Starting launcher...", font=("Arial", 10))
     label.pack(expand=True)
 
     progress = ttk.Progressbar(root, mode="indeterminate")
     progress.pack(fill="x", padx=20, pady=(0, 20))
     progress.start(10)
 
-    root.after(100, lambda: load_and_run(root, label))
+    # Kirimkan variabel progress ke dalam load_and_run
+    root.after(100, lambda: load_and_run(root, label, progress))
     root.mainloop()
 
 

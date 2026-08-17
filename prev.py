@@ -1,43 +1,3 @@
-import subprocess
-import sys
- 
-DEPENDENCIES = {
-    "pdfplumber": "pdfplumber",
-    "pyautogui": "pyautogui",
-    "pyperclip": "pyperclip",
-    "qrcode": "qrcode",
-    "tkinter": "tk", 
-    "PIL": "pillow"  
-}
-
-def check_and_install_dependencies():
-    print("=[ Memulai Pengecekan Dependensi ]=")
-    
-    for module_name, pip_name in DEPENDENCIES.items():
-        try:
-            # Coba import modul untuk mengecek apakah sudah terinstal
-            __import__(module_name)
-            print(module_name)
-            print(f"  [✓] {module_name} sudah terinstal.")
-        except ImportError:
-            # Jika belum ada, lakukan instalasi
-            print(f"  [!] {module_name} BELUM terinstal.")
-            print(f"  [>] Sedang menginstal {pip_name} via pip... Mohon tunggu.")
-            
-            try:
-                # Menjalankan perintah pip install
-                subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
-                print(f"  [✓] Berhasil menginstal {pip_name}!")
-            except subprocess.CalledProcessError as e:
-                print(f"  [X] Gagal menginstal {pip_name}. Error: {e}")
-                print("Program dihentikan karena dependensi tidak terpenuhi.")
-                sys.exit(1)
-                
-    print("=[ Semua Dependensi Siap! Menjalankan Program Utama... ]=\n")
-
-# Jalankan fungsi pengecekan sebelum import library lainnya
-check_and_install_dependencies()
- 
 import os
 import pdfplumber  
 import pyautogui
@@ -52,8 +12,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import messagebox, ttk 
 from PIL import ImageTk, Image
+
+from datetime import datetime, timedelta
  
 currentDate = datetime.now().strftime("%Y-%m-%d")
+yesterday = datetime.now() - timedelta(days=1)
+previousDate = yesterday.strftime("%Y-%m-%d") 
 currentHour = datetime.now().hour  
 keluhanUtama = ''
 diagnosaMedis = ''
@@ -62,14 +26,17 @@ diagnosaKeperawatan = ''
 def notify(msg): 
     if not messagebox.askokcancel("Notifikasi", msg):
         sys.exit()  
- 
-def checkPassword():
+  
+def checkPassword(*args):
     password_set = "asdasd"
-    if password_entry.get() == password_set: 
-        root.destroy() 
-        main()
-    else:
-        messagebox.showerror('Error', 'invalid passcode') 
+    current_input = password_var.get()
+ 
+    if len(current_input) == 6:
+        if current_input == password_set:
+            root.destroy()
+            main()
+        else:
+            pass
  
 def main():   
     def scan(opt):      
@@ -215,7 +182,14 @@ def main():
                 tx = re.search(r"PLAN OF\s*CARE\s*\)\s*(.*?)\s*Konsultasi Dokter", text_tabel, re.DOTALL)  
                 if tx: 
                     lines = tx.group(1).strip().splitlines() 
-                    cleaned_lines = [f"- {re.sub(r'^[-\s]+', '', line)}" for line in lines if not re.search(r'mrs', line, re.IGNORECASE)] 
+                    # cleaned_lines = [f"- {re.sub(r'^[-\s]+', '', line)}" for line in lines if not re.search(r'mrs', line, re.IGNORECASE)] 
+                    
+                    cleaned_lines = [
+                        f"- {subbed_line}"
+                        for line in lines
+                        if not re.search(r"mrs", line, re.IGNORECASE)
+                        for subbed_line in [re.sub(r"^[-\s]+", "", line)]
+                    ]
                     result = "\n".join(cleaned_lines) 
                     terapi_INPUT.delete("1.0", tk.END)
                     terapi_INPUT.insert(tk.END, result) 
@@ -2674,9 +2648,15 @@ def main():
                 pyautogui.press('tab')  
              
         if opt == 'new' :
+            # sebelum jam 7 terhitung shif tanggal sebelumnya  
+            if currentHour < 7 : 
+                pyautogui.typewrite(previousDate)
+            else :
+                pyautogui.typewrite(currentDate)
+
             for _ in range(2):
                 pyautogui.press('tab') 
-            pyautogui.press('space') 
+            pyautogui.typewrite('-') 
             pyautogui.press('tab') 
   
             teks = dr_INPUT.get("1.0", tk.END).strip() 
@@ -2737,15 +2717,19 @@ def main():
             pyautogui.press('tab')
             pyautogui.typewrite(diit_INPUT.get())
             pyautogui.press('tab')
-            pyautogui.press('tab') 
             pyautogui.typewrite('lab, thorax, ecg')
+            pyautogui.press('tab') 
             pyautogui.press('tab')
             pyautogui.typewrite(rpd_INPUT.get())
 
             for i in range(22):   
                 pyautogui.press('tab')
 
-            pyautogui.typewrite('pasien pindahan IGD ...')
+            pyautogui.typewrite('pasien pindahan IGD')
+            for _ in range(2):
+                pyautogui.press('enter')
+            pyautogui.typewrite(terapi_INPUT.get())
+
             for i in range(3):   
                 pyautogui.press('tab')
          
@@ -3603,12 +3587,16 @@ def main():
 root = tk.Tk()
 root.title('?')
 root.after(10000, root.destroy)
-  
-password_entry = tk.Entry(root, width='10', show="*")
-password_entry.grid(row=0, column=0)
-password_entry.focus_set()
+    
+# 1. Variable penampung teks
+password_var = tk.StringVar()
 
-submit = tk.Button(root, width='5', text='run', command=checkPassword)
-submit.grid(row=0, column=1)
+# 2. Trigger fungsi checkPassword setiap kali teks berubah
+password_var.trace_add("write", checkPassword)
+
+# 3. Entry widget
+password_entry = tk.Entry(root, textvariable=password_var, show="*")
+password_entry.pack(padx=20, pady=20)
+password_entry.focus()
 
 root.mainloop() 
