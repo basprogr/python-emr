@@ -13,9 +13,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import messagebox, ttk 
 from PIL import ImageTk, Image
-
  
-  
 currentDate = datetime.now().strftime("%Y-%m-%d")
 yesterday = datetime.now() - timedelta(days=1)
 previousDate = yesterday.strftime("%Y-%m-%d") 
@@ -2890,7 +2888,7 @@ def main():
             if not input_text:
                 generateButton.config(text="Generate", state="normal")
                 return  
-            defaults = [None, None, None, None, "97", "0", "36", "22"]
+            defaults = [None, None, None, None, "97", "0", "36", "20"]
             processed_lines = [] 
             for line in input_text.splitlines():
                 if not line.strip(): 
