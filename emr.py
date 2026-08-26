@@ -15,9 +15,14 @@ from tkinter import messagebox, ttk
 from PIL import ImageTk, Image
  
 currentDate = datetime.now().strftime("%Y-%m-%d")
-yesterday = datetime.now() - timedelta(days=1)
-previousDate = yesterday.strftime("%Y-%m-%d") 
 currentHour = datetime.now().hour  
+yesterday = datetime.now() - timedelta(days=1) 
+nextThreeDay = datetime.now() + timedelta(days=3) 
+
+handoverToday = datetime.now().strftime("%d-%m-%Y")
+handoverYesterday = yesterday.strftime("%d-%m-%Y") 
+handoverReinsersi = nextThreeDay.strftime("%d-%m-%Y") 
+
 keluhanUtama = ''
 diagnosaMedis = ''
 diagnosaKeperawatan = ''
@@ -682,7 +687,9 @@ def main():
         pyautogui.press('tab') 
         pyautogui.press('enter')  
 
-    def akrid():     
+    
+        
+    def askep(opt):
         # -- anamnesis
         pyautogui.write(keluhan_INPUT.get()) 
         pyautogui.press('tab')
@@ -1060,23 +1067,33 @@ def main():
         # -- FUNGSIONAL INDEX
         for i in range(10): 
             pyautogui.press('tab')
-        
-        # -- MORSE FALL SCALE
-        for i in range(2): 
+
+        if opt == 'd' :
+            # MORSE FALL SCALE
+            for i in range(2): 
+                pyautogui.press('tab')
+                pyautogui.press('right')
             pyautogui.press('tab')
             pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right') 
-
+            pyautogui.press('right')
+            pyautogui.press('tab')
+            pyautogui.press('right')
+            pyautogui.press('left')
+            pyautogui.press('tab')
+            pyautogui.press('right')
+            pyautogui.press('right')
+            pyautogui.press('tab')
+            pyautogui.press('right') 
+        if opt == 'g' :
+            # ONTARIO FALL SCALE
+            for i in range(9): 
+                pyautogui.press('tab')
+                pyautogui.press('right')
+            for i in range(2): 
+                pyautogui.press('tab')
+                pyautogui.press('right')
+                pyautogui.press('left')
+        
         # -- DEKUBITUS 
         for i in range(5): 
             pyautogui.press('tab')
@@ -1090,8 +1107,41 @@ def main():
         # -- RESIKO PENYAKIT MENULAR
         pyautogui.press('tab')
         pyautogui.press('right')
-        
-        # -- RESTRAIN
+
+        if opt == 'g' :
+            # -- FUNGSI KOGNITIF - *****************
+            for i in range(10):
+                pyautogui.press('tab')
+                pyautogui.press('right')
+                pyautogui.press('left')
+
+            # -- PENGKAJIAN DEPRESI - ************
+            pyautogui.press('tab')
+            pyautogui.press('right')
+            pyautogui.press('left')
+            for i in range(3):
+                pyautogui.press('tab')
+                pyautogui.press('right')
+            for i in range(2):
+                pyautogui.press('tab')
+                pyautogui.press('right')
+                pyautogui.press('left')
+            for i in range(4):
+                pyautogui.press('tab')
+                pyautogui.press('right')
+            pyautogui.press('tab')
+            pyautogui.press('right')
+            pyautogui.press('left')
+            pyautogui.press('tab')
+            pyautogui.press('right')
+            pyautogui.press('tab')
+            pyautogui.press('right')
+            pyautogui.press('left')
+            for i in range(2):
+                pyautogui.press('tab')
+                pyautogui.press('right')
+
+        # RESTRAIN
         for i in range(6):
             pyautogui.press('tab') 
         pyautogui.press('right')
@@ -1102,7 +1152,7 @@ def main():
         pyautogui.press('left')
         pyautogui.press('tab') 
 
-        # -- EWS
+        # EWS
         pyautogui.press('tab') 
         pyautogui.write(rr_INPUT.get())  
         pyautogui.press('tab') 
@@ -1120,7 +1170,7 @@ def main():
         pyautogui.press('right') 
         pyautogui.press('left')  
 
-        # -- DISCARD PLANNING
+        # DISCARD PLANNING
         pyautogui.press('tab') 
         pyautogui.press('right') 
         pyautogui.press('left') 
@@ -1137,485 +1187,6 @@ def main():
             pyautogui.press('tab') 
         pyautogui.write('-')    
  
-    def akrig():     
-        # -- anamnesis
-        pyautogui.write(keluhan_INPUT.get()) 
-        pyautogui.press('tab')
-        pyautogui.write(rps_INPUT.get()) 
-        pyautogui.press('tab')
-        pyautogui.write(rpd_INPUT.get())  
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-
-        if alergi_INPUT.get() == '' or alergi_INPUT.get() == '-':
-            pyautogui.press('right')
-            pyautogui.press('left') 
-            pyautogui.press('tab')
-        else:
-            pyautogui.press('right')
-            pyautogui.press('tab')
-            pyautogui.write(alergi_INPUT.get())
-
-        # -- psiko
-        pyautogui.press('tab') 
-        pyautogui.press('space')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        pyautogui.press('space')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('space')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.write('tidak ada')
-
-        # -- sosial
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.write('tidak ada')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.write('tidak ada')
-
-        # -- ekonomi
-        for i in range(11):
-            pyautogui.press('tab')   
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        
-        # -- nilai budaya
-        pyautogui.press('tab') 
-        pyautogui.write('tidak ada') 
-        pyautogui.press('tab') 
-        pyautogui.write('tidak ada') 
-        
-        # -- ttv
-        pyautogui.press('tab')   
-        pyautogui.write(sistole_INPUT.get())   
-        pyautogui.press('tab')   
-        pyautogui.write(diastole_INPUT.get())   
-        pyautogui.press('tab')   
-        pyautogui.write(nadi_INPUT.get())   
-        pyautogui.press('tab')   
-        pyautogui.press('right')   
-        pyautogui.press('left')   
-        pyautogui.press('tab')   
-        pyautogui.write(rr_INPUT.get()) 
-        for i in range(4):   
-            pyautogui.press('tab')    
-        pyautogui.write(suhu_INPUT.get())   
-        pyautogui.press('tab')   
-        pyautogui.write(spo2_INPUT.get())   
-        pyautogui.press('tab')   
-        
-        # -- B1
-        pyautogui.press('tab') 
-        pyautogui.press('space') 
-        for i in range(9):
-            pyautogui.press('tab')  
-        pyautogui.press('space') 
-        for i in range(6):
-            pyautogui.press('tab')  
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('space') 
-        for i in range(8):
-            pyautogui.press('tab')  
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-
-        # -- B2 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left')  
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('left')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('left')  
-        pyautogui.press('tab') 
-
-        # -- B3 
-        pyautogui.press('tab')
-        pyautogui.write('E4V5M6') 
-        pyautogui.press('tab')
-        pyautogui.press('space')
-        for i in range(14):
-            pyautogui.press('tab') 
-        pyautogui.press('space') 
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab')
-        pyautogui.press('space')
-        for i in range(6): 
-            pyautogui.press('tab') 
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        
-        # -- B4 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab')  
-        pyautogui.write('-+ 500') 
-        pyautogui.press('tab') 
-        pyautogui.write('kuning') 
-        
-        # -- B5
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab')  
-        pyautogui.press('tab') 
-        pyautogui.write('> 2x') 
-        pyautogui.press('tab') 
-        pyautogui.write('-+ 500 cc') 
-        for i in range(5): 
-            pyautogui.press('tab') 
-        pyautogui.press('space') 
-        for i in range(3): 
-            pyautogui.press('tab') 
-        pyautogui.write(diit_INPUT.get()) 
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        for i in range(7): 
-            pyautogui.press('tab') 
-        pyautogui.press('space') 
-        pyautogui.press('tab')
-        for i in range(4): 
-            pyautogui.press('tab') 
-        pyautogui.press('space')  
-        for i in range(14): 
-            pyautogui.press('tab') 
-        pyautogui.press('right')
-        pyautogui.press('left')  
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.write('kuning')  
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left') 
-        pyautogui.press('tab')
-        
-        # -- B6
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left')  
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.write('5') 
-        pyautogui.press('tab') 
-        pyautogui.write('5') 
-        pyautogui.press('tab') 
-        pyautogui.write('5') 
-        pyautogui.press('tab') 
-        pyautogui.write('5')  
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('right') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left')  
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left')  
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left')  
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left')  
-        
-        # -- endokrin 
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')  
-        pyautogui.press('tab') 
-        pyautogui.press('right')   
-        for i in range(6): 
-            pyautogui.press('tab') 
- 
-        # -- asesmen nyeri 
-        if nyeriAkut_VAR.get() :
-            pyautogui.press('tab') 
-            pyautogui.press('right') 
-            pyautogui.press('tab') 
-            pyautogui.press('enter')
-            pyautogui.press('down') 
-            pyautogui.press('down') 
-            pyautogui.press('down') 
-            pyautogui.press('enter') 
-            pyautogui.press('tab') 
-            pyautogui.press('right') 
-            pyautogui.press('left') 
-            pyautogui.press('tab') 
-            pyautogui.press('right') 
-            pyautogui.press('tab') 
-            pyautogui.press('tab') 
-            pyautogui.press('right') 
-            pyautogui.press('left') 
-            for i in range(5): 
-                pyautogui.press('tab') 
-            pyautogui.press('tab') 
-        else:
-            pyautogui.press('tab') 
-            pyautogui.press('right') 
-            pyautogui.press('left') 
-            pyautogui.press('tab') 
-
-        # -- nutrisi
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-
-        # -- FUNGSIONAL INDEX
-        for i in range(10): 
-            pyautogui.press('tab')
-
-        # -- ONTARIO FALL SCALE
-        for i in range(9): 
-            pyautogui.press('tab')
-            pyautogui.press('right')
-        for i in range(2): 
-            pyautogui.press('tab')
-            pyautogui.press('right')
-            pyautogui.press('left')
-
-        # -- DEKUBITUS 
-        for i in range(5): 
-            pyautogui.press('tab')
-            pyautogui.press('right')
-            pyautogui.press('right')
-            pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('right')
-
-        # -- RESIKO PENYAKIT MENULAR
-        pyautogui.press('tab')
-        pyautogui.press('right')
-
-        # -- FUNGSI KOGNITIF
-        for i in range(10):
-            pyautogui.press('tab')
-            pyautogui.press('right')
-            pyautogui.press('left')
-
-        # -- PENGKAJIAN DEPRESI
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        for i in range(3):
-            pyautogui.press('tab')
-            pyautogui.press('right')
-        for i in range(2):
-            pyautogui.press('tab')
-            pyautogui.press('right')
-            pyautogui.press('left')
-        for i in range(4):
-            pyautogui.press('tab')
-            pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('tab')
-        pyautogui.press('right')
-        pyautogui.press('left')
-        for i in range(2):
-            pyautogui.press('tab')
-            pyautogui.press('right')
-
-        # -- RESTRAIN
-        for i in range(6):
-            pyautogui.press('tab') 
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab') 
-        pyautogui.press('tab') 
-        pyautogui.press('right')
-        pyautogui.press('left')
-        pyautogui.press('tab') 
-
-        # -- EWS
-        pyautogui.press('tab') 
-        pyautogui.write(rr_INPUT.get())  
-        pyautogui.press('tab') 
-        pyautogui.write(spo2_INPUT.get())  
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        pyautogui.press('tab') 
-        pyautogui.write(suhu_INPUT.get()) 
-        pyautogui.press('tab') 
-        pyautogui.write(sistole_INPUT.get()) 
-        pyautogui.press('tab') 
-        pyautogui.write(nadi_INPUT.get())
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left')  
-
-        # -- DISCARD PLANNING
-        pyautogui.press('tab') 
-        pyautogui.press('right') 
-        pyautogui.press('left') 
-        for i in range(3):
-            pyautogui.press('tab') 
-            pyautogui.press('right')  
-        for i in range(30):
-            pyautogui.press('tab') 
-        pyautogui.press('space')  
-        for i in range(11):
-            pyautogui.press('tab') 
-        pyautogui.press('space')  
-        for i in range(20):
-            pyautogui.press('tab') 
-        pyautogui.write('-')    
  
     def report():   
         # reset preview field
@@ -2649,9 +2220,9 @@ def main():
         if opt == 'new' :
             # sebelum jam 7 terhitung shif tanggal sebelumnya  
             if currentHour < 7 : 
-                pyautogui.typewrite(previousDate)
+                pyautogui.typewrite(handoverYesterday)
             else :
-                pyautogui.typewrite(currentDate)
+                pyautogui.typewrite(handoverToday)
 
             for _ in range(2):
                 pyautogui.press('tab') 
@@ -2724,11 +2295,23 @@ def main():
             for i in range(22):   
                 pyautogui.press('tab')
 
-            pyautogui.typewrite('pasien pindahan IGD')
+            pyautogui.typewrite('♿ pasien pindahan IGD')
             for _ in range(2):
                 pyautogui.press('enter')
-            pyautogui.typewrite(terapi_INPUT.get())
-
+            pyautogui.typewrite('r/ ganti infus : ')
+            pyautogui.typewrite(handoverReinsersi)
+            for _ in range(2):
+                pyautogui.press('enter')
+            pyautogui.typewrite('📌 a/p IGD :')
+            pyautogui.press('enter')
+            pyautogui.typewrite(terapi_INPUT.get("1.0", tk.END))
+            for _ in range(2):
+                pyautogui.press('enter')
+            lines = dr_INPUT.get("1.0", tk.END).strip().split("\n")
+            formatted_lines = [f"📌 a/p dr. {line.strip()}" for line in lines] 
+            res = "\n\n".join(formatted_lines) 
+            pyautogui.typewrite(res)
+ 
             for i in range(3):   
                 pyautogui.press('tab')
          
@@ -2781,12 +2364,12 @@ def main():
             openLink('asesmenDewasa')
             messagebox.showinfo('Notifikasi', 'Isi asesmen dewasa?')
             time.sleep(2)
-            akrid()
+            askep('d')
         else :
             openLink('asesmenGeriatri')  
             messagebox.showinfo('Notifikasi', 'Isi asesmen geriatri?')
             time.sleep(2)
-            akrig() 
+            askep('g')
         messagebox.showinfo('Notifikasi', "Lanjutkan diagnosa?")  
         time.sleep(2)
         diagnose()  
@@ -3275,9 +2858,9 @@ def main():
     def partial_askep(opt):
         time.sleep(2)
         if opt == 'd' :
-            akrid()
+            askep('d')
         if opt == 'g' :
-            akrig()         
+            askep('g')       
         messagebox.showinfo('Notifikasi', "Lanjutkan diagnosa?")  
         time.sleep(2)
         diagnose()  
