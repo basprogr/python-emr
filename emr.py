@@ -2217,31 +2217,24 @@ def main():
             for _ in range(36):
                 pyautogui.press('tab')  
              
-        if opt == 'new' :
-            # sebelum jam 7 terhitung shif tanggal sebelumnya  
-            if currentHour < 7 : 
+        if opt == 'new' : 
+            if currentHour < 7 : # sebelum jam 7 terhitung shif tanggal sebelumnya
                 pyautogui.typewrite(handoverYesterday)
             else :
-                pyautogui.typewrite(handoverToday)
-
+                pyautogui.typewrite(handoverToday) 
             for _ in range(2):
                 pyautogui.press('tab') 
             pyautogui.typewrite('-') 
-            pyautogui.press('tab') 
-  
-            teks = dr_INPUT.get("1.0", tk.END).strip() 
-            time.sleep(3) 
+            pyautogui.press('tab')  
+            teks = dr_INPUT.get("1.0", tk.END).strip()  
             for nama in teks.splitlines():
-                nama_bersih = nama.strip() # Membersihkan spasi di awal/akhir nama jika ada
-                
-                if nama_bersih: # Memastikan baris tersebut tidak kosong
+                nama_bersih = nama.strip() # Membersihkan spasi di awal/akhir nama jika ada 
+                if nama_bersih: 
                     pyautogui.typewrite(nama_bersih) 
                     pyautogui.press('down') 
-                    pyautogui.press('enter')  
-                    time.sleep(0.5) 
-
-            pyautogui.press('tab') 
-            pyautogui.typewrite('0')
+                    pyautogui.press('enter')   
+            pyautogui.press('tab')
+            pyautogui.typewrite('1')
             pyautogui.press('tab')  
             pyautogui.typewrite('20') 
             for _ in range(2):
@@ -2253,8 +2246,7 @@ def main():
             pyautogui.typewrite('0')
             for _ in range(7):
                 pyautogui.press('tab')
-            pyautogui.press('space')
-
+            pyautogui.press('space') 
             if currentHour > 6 and currentHour < 14:
                 pyautogui.press('down')  
             elif currentHour > 13 and currentHour < 21:
@@ -2264,24 +2256,23 @@ def main():
                 pyautogui.press('down') 
                 pyautogui.press('down') 
                 pyautogui.press('down')
-            pyautogui.press('enter')  
-
+            pyautogui.press('enter')   
             pyautogui.press('tab')
             pyautogui.typewrite(keluhan_INPUT.get())
             pyautogui.press('tab')
             pyautogui.typewrite(diagnosa_INPUT.get())
             pyautogui.press('tab')
-            pyautogui.typewrite(diagnosaKeperawatan)
-
+            pyautogui.typewrite(diagnosaKeperawatan) 
             if alergi_INPUT.get() == '' or alergi_INPUT.get() == '-' :
-                pyautogui.press('tab')
-                pyautogui.press('tab')
+                pyautogui.press('tab')  
+                pyautogui.press('right')
+                pyautogui.press('left')
+                pyautogui.press('tab') 
             else :
                 pyautogui.press('tab')
                 pyautogui.press('right')
                 pyautogui.press('tab')
-                pyautogui.typewrite(alergi_INPUT.get())
-
+                pyautogui.typewrite(alergi_INPUT.get()) 
             pyautogui.press('tab')
             pyautogui.typewrite('infus')
             pyautogui.press('tab')
@@ -2290,31 +2281,27 @@ def main():
             pyautogui.typewrite('lab, thorax, ecg')
             pyautogui.press('tab') 
             pyautogui.press('tab')
-            pyautogui.typewrite(rpd_INPUT.get())
-
+            pyautogui.typewrite(rpd_INPUT.get()) 
             for i in range(22):   
-                pyautogui.press('tab')
-
-            pyautogui.typewrite('♿ pasien pindahan IGD')
+                pyautogui.press('tab') 
+            pyautogui.typewrite('→ pasien pindahan IGD')
             for _ in range(2):
                 pyautogui.press('enter')
-            pyautogui.typewrite('r/ ganti infus : ')
+            pyautogui.typewrite('→ r/ ganti infus : ')
             pyautogui.typewrite(handoverReinsersi)
             for _ in range(2):
                 pyautogui.press('enter')
-            pyautogui.typewrite('📌 a/p IGD :')
+            pyautogui.typewrite('→ a/p IGD :')
             pyautogui.press('enter')
             pyautogui.typewrite(terapi_INPUT.get("1.0", tk.END))
             for _ in range(2):
                 pyautogui.press('enter')
             lines = dr_INPUT.get("1.0", tk.END).strip().split("\n")
-            formatted_lines = [f"📌 a/p dr. {line.strip()}" for line in lines] 
+            formatted_lines = [f"→ a/p dr. {line.strip()}" for line in lines] 
             res = "\n\n".join(formatted_lines) 
-            pyautogui.typewrite(res)
- 
+            pyautogui.typewrite(res) 
             for i in range(3):   
-                pyautogui.press('tab')
-         
+                pyautogui.press('tab') 
         if currentHour > 6 and currentHour < 14: 
             handOverTime = currentDate + ' 14:00:00' 
         elif currentHour > 13 and currentHour < 21: 
