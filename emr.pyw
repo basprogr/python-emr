@@ -262,8 +262,7 @@ def main():
                 diet_match = re.search(r"Diet(.*?)Makan", text_tabel)
                 if diet_match: 
                     diit_INPUT.delete(0, tk.END) 
-                    diit_INPUT.insert(0, diet_match.group(1).strip()) 
-
+                    diit_INPUT.insert(0, diet_match.group(1).strip())  
                 inf_match = re.search(r"Infus \(dalam 24 jam\)(.*?)Obat Injeksi", allTextWithoutNewLine, re.DOTALL)
                 inj_match = re.search(r"Obat Injeksi(.*?)Obat Oral", allTextWithoutNewLine, re.DOTALL)
                 po_match = re.search(r"Obat Oral(.*?)Prosedur Medis", allTextWithoutNewLine, re.DOTALL)
