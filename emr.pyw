@@ -50,21 +50,14 @@ def main():
             'i': "print_asperawat_gd.pdf",
             't': "print_transfer.pdf"
         } 
-        filename = file_options.get(opt) 
-        
-        # Jaga-jaga jika opt tidak valid
-        if not filename:
-            messagebox.showwarning("Peringatan", f"Opsi '{opt}' tidak dikenal.")
-            return
-
+        filename = file_options.get(opt)   
         pdf_path = str(Path.home() / "Downloads" / filename)
         
         # Inisialisasi variabel penampung string agar aman dari NameError di akhir code
         keluhanUtama = ""
         diagnosaMedis = ""
         usia_STRING = 0
-
-        # 1. PROSES SCANNING (Cukup buka PDF 1 kali)
+ 
         try: 
             with pdfplumber.open(pdf_path) as pdf:
                 text_biasa = ""
@@ -200,6 +193,11 @@ def main():
                     
                 report() 
                 rx()
+
+                print(text_biasa)
+                print('========================')
+                print(text_tabel)
+
             
             else: # Jika opt == 't' (Transfer)
                 allTextWithoutNewLine = text_tabel.replace('\n', '. ')   
@@ -353,31 +351,23 @@ def main():
         pyautogui.press('tab')
         pyautogui.press('tab')
         
-        if opt == 'c' or opt == 'copy': 
-            # Subyektif
-
+        if opt == 'c' or opt == 'copy':  
             pyautogui.hotkey('ctrl', 'a')  
             pyautogui.hotkey('ctrl', 'c')  
             s = pyperclip.paste()  
             s_res = re.sub(r'pasien mengatakan\s*', '', s, flags=re.IGNORECASE)   
             pyperclip.copy(s_res)  
-            pyautogui.hotkey('ctrl', 'v')   
-
-            pyautogui.press('tab') 
-
+            pyautogui.hotkey('ctrl', 'v')    
+            pyautogui.press('tab')  
             pyautogui.hotkey('ctrl', 'a')  
             pyautogui.hotkey('ctrl', 'c')  
             o = pyperclip.paste()   
             o_res = re.sub(r"\s*Rr[\s\S]*?(?:\sO2|lpm)\b", "\nDELETED", o)  
             pyperclip.copy(o_res)  
-            pyautogui.hotkey('ctrl', 'v')
- 
+            pyautogui.hotkey('ctrl', 'v') 
             pyautogui.press('tab') 
-            pyautogui.press('tab') 
-
-            # Asesmen
- 
-            pyautogui.hotkey('ctrl', 'a')  
+            pyautogui.press('tab')  
+            pyautogui.hotkey('ctrl', 'a')  # asesmen
             pyautogui.hotkey('ctrl', 'c')  
             asesmen = pyperclip.paste()  
 
@@ -2283,9 +2273,9 @@ def main():
             pyautogui.write(rpd_INPUT.get()) 
             for i in range(22):   
                 pyautogui.press('tab') 
-            pyautogui.write('-- pasien pindahan IGD\n\n-- r/ ganti infus : ')  
+            pyautogui.write('[+] pasien pindahan IGD\n\n[+] r/ ganti infus : ')  
             pyautogui.write(handoverReinsersi) 
-            pyautogui.write('\n\n-- a/p IGD :\n') 
+            pyautogui.write('\n\n[+] a/p IGD :\n') 
             pyautogui.write(terapi_INPUT.get("1.0", tk.END))
             for _ in range(2):
                 pyautogui.press('enter')
