@@ -2283,15 +2283,9 @@ def main():
             pyautogui.typewrite(rpd_INPUT.get()) 
             for i in range(22):   
                 pyautogui.press('tab') 
-            pyautogui.typewrite('→ pasien pindahan IGD')
-            for _ in range(2):
-                pyautogui.press('enter')
-            pyautogui.typewrite('→ r/ ganti infus : ')
-            pyautogui.typewrite(handoverReinsersi)
-            for _ in range(2):
-                pyautogui.press('enter')
-            pyautogui.typewrite('→ a/p IGD :')
-            pyautogui.press('enter')
+            pyautogui.typewrite('-- pasien pindahan IGD\n\n-- r/ ganti infus : ')  
+            pyautogui.typewrite(handoverReinsersi) 
+            pyautogui.typewrite('\n\n-- a/p IGD :\n') 
             pyautogui.typewrite(terapi_INPUT.get("1.0", tk.END))
             for _ in range(2):
                 pyautogui.press('enter')
@@ -2785,30 +2779,20 @@ def main():
         for i in range(5): 
             pyautogui.press('tab')
 
-    def vitalSignRoutine222(line):
-        while True:
-            vitalSignOpt = messagebox.askyesnocancel("Notifikasi", "Lanjut CPPT?")
-
-            if vitalSignOpt is True:
-                # Lanjut proses (keluar dari loop)
-                print("Melanjutkan proses...")
-                break
-            elif vitalSignOpt is False:
-                # Mengulang proses (loop akan mengulang dari awal)
-                print("Mengulang vitalSignRoutine...")
-                continue
-            else:
-                # Cancel / tutup dialog
-                print("Proses dibatalkan.")
-                return
-    
     def routine(line, shift):
-        time.sleep(2)
+        time.sleep(1)
         openLink('ttv') 
         notify('Isi TTV?')
         time.sleep(1)
-        vitalSignRoutine(line)  
-        notify('Lanjut CPPT?')
+        while True:
+            vitalSignRoutine(line)
+            answer = messagebox.askyesnocancel('Notifikasi', 'Lanjut CPPT?')
+            if answer is True:  
+                break 
+            elif answer is False:
+                continue 
+            elif answer is None: 
+                return 
         time.sleep(1)
         openLink('cppt')  
         notify('Rewrite CPPT?')
@@ -2831,7 +2815,7 @@ def main():
         implementationList.clear()
  
     def routine2():
-        time.sleep(2)
+        time.sleep(1)
         openLink('handover') 
         notify('Isi handover?')
         time.sleep(2)
