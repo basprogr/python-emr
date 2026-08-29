@@ -2784,6 +2784,23 @@ def main():
         pyautogui.press('enter')
         for i in range(5): 
             pyautogui.press('tab')
+
+    def vitalSignRoutine222(line):
+        while True:
+            vitalSignOpt = messagebox.askyesnocancel("Notifikasi", "Lanjut CPPT?")
+
+            if vitalSignOpt is True:
+                # Lanjut proses (keluar dari loop)
+                print("Melanjutkan proses...")
+                break
+            elif vitalSignOpt is False:
+                # Mengulang proses (loop akan mengulang dari awal)
+                print("Mengulang vitalSignRoutine...")
+                continue
+            else:
+                # Cancel / tutup dialog
+                print("Proses dibatalkan.")
+                return
     
     def routine(line, shift):
         time.sleep(2)
