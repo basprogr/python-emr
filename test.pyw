@@ -2274,16 +2274,20 @@ def main():
             pyautogui.write(rpd_INPUT.get()) 
             for i in range(22):   
                 pyautogui.press('tab') 
-            pyautogui.write('[+] pasien pindahan IGD\n\n[+] r/ ganti infus : ')  
-            pyautogui.write(handoverReinsersi) 
-            pyautogui.write('\n\n[+] a/p IGD :\n') 
+
+            pyperclip.copy('📌 pasien pindahan IGD\n\n📌 r/ ganti infus : ') 
+            pyautogui.hotkey("ctrl", "v") 
+            pyautogui.write(handoverReinsersi)  
+            pyperclip.copy('\n\n📌 a/p IGD :\n') 
+            pyautogui.hotkey("ctrl", "v")
             pyautogui.write(terapi_INPUT.get("1.0", tk.END))
             for _ in range(2):
                 pyautogui.press('enter')
             lines = dr_INPUT.get("1.0", tk.END).strip().split("\n")
-            formatted_lines = [f"→ a/p dr. {line.strip()}" for line in lines] 
-            res = "\n\n".join(formatted_lines) 
-            pyautogui.write(res) 
+            formatted_lines = [f"📌 a/p dr. {line.strip()}" for line in lines] 
+            res = "\n\n".join(formatted_lines)  
+            pyperclip.copy(res) 
+            pyautogui.hotkey("ctrl", "v") 
             for i in range(3):   
                 pyautogui.press('tab') 
         if currentHour > 6 and currentHour < 14: 
