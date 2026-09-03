@@ -2323,7 +2323,7 @@ def main():
         openLink('ttv') 
         messagebox.showinfo('Notifikasi', "Isi TTV?") 
         time.sleep(1)
-        vitalSignNewPatient() 
+        vitalSign('new') 
         messagebox.showinfo('Notifikasi', "Lanjutkan CPPT?")  
         time.sleep(1)
         openLink('cppt') 
@@ -2434,31 +2434,25 @@ def main():
             btn_load.config(text="load", state="normal")
  
     def generate_buttons():
-        generateButton.config(text="formating", state="disabled")
-        hour = datetime.now().hour  
-        if hour > 6 and hour < 14 : 
-            shift, ket = 'morning', ' (P)'
-        else:
-            shift, ket = 'notMorning', ''
+        generateButton.config(state="disabled")
         app.update_idletasks()
+ 
         try: 
             input_text = txa_vitalSign.get("1.0", tk.END).strip() 
             if not input_text:
                 generateButton.config(text="generate", state="normal")
                 return  
-            defaults = [None, None, None, None, "97", "0", "36", "20"]
+            defaults = [None, None, None, None, '97', '0', '36', '20', '1']
             processed_lines = [] 
             for line in input_text.splitlines():
                 if not line.strip(): 
                     continue 
                 parts = line.split('-')
-                complete_parts = [parts[i] if i < len(parts) else defaults[i] for i in range(8)]
+                complete_parts = [parts[i] if i < len(parts) else defaults[i] for i in range(9)]
                 processed_lines.append("-".join(complete_parts)) 
             final_output = "\n".join(processed_lines) 
             txa_vitalSign.delete("1.0", tk.END) 
-            txa_vitalSign.insert("1.0", final_output)   
-            generateButton.config(text="creating back up", state="disabled")
-            app.update_idletasks() 
+            txa_vitalSign.insert("1.0", final_output)    
             vitalSignBackUp() 
         except Exception as e: 
             messagebox.showerror("Error", f"{e}") 
@@ -2473,54 +2467,64 @@ def main():
                     parts = line.split('-')
                     room = parts[0]
  
-                    b = tk.Button(routineFieldset, text=f'{room}{ket}', font=(ff, fs), command=lambda l=line, s=shift: routine(l, s))
+                    b = tk.Button(routineFieldset, text=f'{room}', font=(ff, fs), command=lambda l=line: routine('all', l))
                     b.pack(fill='x', pady=2, padx=2)  
-            generateButton.config(text="generate", state="normal")
- 
-    def vitalSignNewPatient():   
-        pyautogui.write(rr_INPUT.get())
-        pyautogui.press('tab')  
-        pyautogui.write(spo2_INPUT.get())
-        pyautogui.press('tab')  
-        pyautogui.press('tab')  
-        pyautogui.write(suhu_INPUT.get())
-        pyautogui.press('tab')  
-        pyautogui.write(sistole_INPUT.get())
-        pyautogui.press('tab')  
-        pyautogui.write(diastole_INPUT.get())
-        pyautogui.press('tab')  
-        pyautogui.write(nadi_INPUT.get()) 
-    
-    def vitalSignRoutine(line_data): 
-        data = line_data.split('-') 
-        
-        # Mapping variabel 
-        sistole  = data[1]
-        diastole = data[2]
-        nadi     = data[3]
-        spo2     = data[4]
-        o2       = data[5] 
-        suhu     = data[6]
-        rr       = data[7]
+            generateButton.config(state='normal')
   
-        pyautogui.write(rr)
-        pyautogui.press('tab') 
-        pyautogui.write(spo2)
-        pyautogui.press('tab') 
-        if o2 == '0' : 
-            pyautogui.press('tab') 
-        else: 
-            pyautogui.press('right')
-            pyautogui.press('tab')   
-        pyautogui.write(suhu)
-        pyautogui.press('tab') 
-        pyautogui.write(sistole)
-        pyautogui.press('tab') 
-        pyautogui.write(diastole)
-        pyautogui.press('tab') 
-        pyautogui.write(nadi)
-        pyautogui.press('enter')
+    def vitalSign(opt, row=None): 
+        if opt == 'new' :
+            pyautogui.write(rr_INPUT.get())
+            pyautogui.press('tab')  
+            pyautogui.write(spo2_INPUT.get())
+            pyautogui.press('tab')  
+            pyautogui.press('tab')  
+            pyautogui.write(suhu_INPUT.get())
+            pyautogui.press('tab')  
+            pyautogui.write(sistole_INPUT.get())
+            pyautogui.press('tab')  
+            pyautogui.write(diastole_INPUT.get())
+            pyautogui.press('tab')  
+            pyautogui.write(nadi_INPUT.get()) 
 
+        if opt == 'routine' :
+            data = row.split('-')  
+            sistole  = data[1]
+            diastole = data[2]
+            nadi     = data[3]
+            spo2     = data[4]
+            o2       = data[5] 
+            suhu     = data[6]
+            rr       = data[7]
+            respon   = data[8]
+    
+            pyautogui.write(rr)
+            pyautogui.press('tab') 
+            pyautogui.write(spo2)
+            pyautogui.press('tab') 
+            if o2 == '0' : 
+                pyautogui.press('tab') 
+            else: 
+                pyautogui.press('right')
+                pyautogui.press('tab')   
+            pyautogui.write(suhu)
+            pyautogui.press('tab') 
+            pyautogui.write(sistole)
+            pyautogui.press('tab') 
+            pyautogui.write(diastole)
+            pyautogui.press('tab') 
+            pyautogui.write(nadi)
+            
+            # mekanisme jika pasien tidak penurunan kesadaran
+            if respon == 0 :
+                pyautogui.press('tab')
+                pyautogui.press('space')
+                pyautogui.press('down')
+                pyautogui.press('enter')
+                pyautogui.press('tab')
+                pyautogui.press('enter')
+            else :
+                pyautogui.press('enter')
+ 
     def openLink(opt): 
         pyautogui.hotkey('ctrl', 'l')  
         pyautogui.hotkey('ctrl', 'c')  
@@ -2773,70 +2777,51 @@ def main():
         for i in range(5): 
             pyautogui.press('tab')
 
-    def routine(line, shift):
-        time.sleep(1)
-        openLink('ttv') 
-        notify('Isi TTV?')
-        while True: 
+    def routine(opt, line=None) :
+        if opt == 'all' :
+            shift = 'morning' if 6 < currentHour < 14 else 'notMorning'  
             time.sleep(1)
-            vitalSignRoutine(line)
-            answer = messagebox.askyesnocancel('Notifikasi', 'Lanjut CPPT?')
-            if answer is True:  
-                break 
-            elif answer is False:
-                continue 
-            elif answer is None: 
-                return 
-        time.sleep(1)
-        openLink('cppt')  
-        notify('Rewrite CPPT?')
-        time.sleep(2)
-        copyCPPT(line)   
-        setDiagnose(diagnoseList)
-        if shift != 'morning' : 
-            notify('Pindah ke diagnosa?')
-            time.sleep(1)    
-        openLink('diagnose') 
-        notify('Isi diagnosa?')
-        time.sleep(1) 
-        diagnoseDate()
-        diagnose() 
-        notify('Lanjut implementasi?')
-        time.sleep(2)
-        implement()  
-        diagnoseList.clear()
-        interventionList.clear()
-        implementationList.clear()
-        pyautogui.hotkey("ctrl", "tab")   
- 
-    def routine2():
-        time.sleep(1)
-        openLink('handover') 
-        notify('Isi handover?')
-        time.sleep(2)
-        handover('copy')
+            openLink('ttv') 
+            notify('Isi TTV?')
+            while True: 
+                time.sleep(1)
+                vitalSign('routine', line)
+                answer = messagebox.askyesnocancel('Notifikasi', 'Lanjut CPPT?')
+                if answer is True:  
+                    break 
+                elif answer is False:
+                    continue 
+                elif answer is None: 
+                    return 
+            time.sleep(1)
+            openLink('cppt')  
+            notify('Rewrite CPPT?')
+            time.sleep(2)
+            copyCPPT(line)   
+            setDiagnose(diagnoseList)
+            if shift != 'morning' : 
+                notify('Pindah ke diagnosa?')
+                time.sleep(1)    
+            openLink('diagnose') 
+            notify('Isi diagnosa?')
+            time.sleep(1) 
+            diagnoseDate()
+            diagnose() 
+            notify('Lanjut implementasi?')
+            time.sleep(2)
+            implement()  
+            diagnoseList.clear()
+            interventionList.clear()
+            implementationList.clear()
+            pyautogui.hotkey("ctrl", "tab")  
 
-    def getFile(opt):
-        time.sleep(2)  
-        pyautogui.hotkey("ctrl", "l")  
-        pyautogui.hotkey("ctrl", "c")  
-        url_asal = pyperclip.paste()  
-        match = re.search(r"idx=(\d+)&idp=(\d+)", url_asal) 
-        if match:
-            idx = match.group(1)
-            idp = match.group(2) 
-
-            if opt == 'igd':
-                url_baru = f"http://20.20.20.6/app.mersi-hospital/live.rme/igd/print_asperawat_gd?idp={idp}&idx={idx}&print=ok" 
-            if opt == 'irj':
-                url_baru = f'http://20.20.20.6/app.mersi-hospital/live.rme/rawatinap/transfer_pasien_rajal?idx={idx}&idp={idp}'
-        else:
-            print("Parameter idx atau idp tidak ditemukan.")
-
-        pyperclip.copy(url_baru)
-        pyautogui.hotkey("ctrl", "v")
-        pyautogui.press("enter")  
-
+        if opt == 'handover' :
+            time.sleep(1)
+            openLink('handover') 
+            notify('Isi handover?')
+            time.sleep(2)
+            handover('copy')
+  
     def partial_askep(opt):
         time.sleep(2)
         if opt == 'd' :
@@ -2960,34 +2945,35 @@ def main():
             btn_fetch.config(state=tk.NORMAL)
  
     def run_all_routine(): 
-        runAllButton.config(text="running", state="disabled") 
+        runAllButton.config(state="disabled") 
         try: 
             input_text = txa_vitalSign.get("1.0", tk.END).strip()
             if not input_text:
                 return
-                
-            hour = datetime.now().hour  
-            shift = 'morning' if 6 < hour < 14 else 'notMorning' 
+                 
             lines = input_text.splitlines()
             for line in lines:
                 if not line.strip():
-                    continue 
+                    continue  
+                routine('all', line) 
 
-                routine(line, shift) 
-                
+            messagebox.showinfo('Notifikasi', "Sudah login sebagai PJ?") 
+            while True:
+                routine('handover') 
+                confirm = messagebox.askokcancel('Notifikasi', 'tekan cancel untuk mengulang handover, OK untuk selesai') 
+                if confirm:
+                    break  
+
         except Exception as e:
             messagebox.showerror("Error", f"Terjadi kesalahan: {e}")
         finally:
-            runAllButton.config(text="routine", state="normal")
+            runAllButton.config(state="normal")
 
-    def start_automation_thread():
-        # Menjalankan fungsi di latar belakang (thread) agar GUI tidak freeze
+    def start_automation_thread(): 
         t = threading.Thread(target=run_all_routine)
         t.daemon = True
-        t.start()
- 
-    
-    
+        t.start() 
+
     # ========== Main apps GUI ==========
  
     app = tk.Tk()
@@ -3032,7 +3018,7 @@ def main():
     
     fset_handover = tk.LabelFrame(tab1, font=(ff, fs), text=" handover ")
     fset_handover.pack(fill='x', padx=5, pady=5)    
-    handoverButton = tk.Button(fset_handover, font=(ff, fs), text="fill out", command=routine2)
+    handoverButton = tk.Button(fset_handover, font=(ff, fs), text="fill out", command=lambda: routine('handover'))
     handoverButton.pack(fill='x', padx=1)
 
     # ========== Tab 2 : New Patient ==========
@@ -3182,14 +3168,7 @@ def main():
     resikoJatuh_VAR = tk.BooleanVar()
     resikoJatuh = tk.Checkbutton(row22, text="Resiko Jatuh", font=(ff, fs), variable=resikoJatuh_VAR)
     resikoJatuh.pack(side=tk.LEFT, padx='1')
-   
-    row23 = ttk.Frame(diagnoseFieldset)
-    row23.pack(fill='x', side=tk.TOP, anchor='w')
-    getAsesmenIGD = tk.Button(row23, text="asesmen IGD", font=(ff, fs), command=lambda: getFile('igd'))
-    getAsesmenIGD.pack(side=tk.LEFT, padx='1')
-    getAsesmenIRJ = tk.Button(row23, text="transfer ", font=(ff, fs), command=lambda: getFile('irj'))
-    getAsesmenIRJ.pack(side=tk.LEFT, padx='1')
- 
+     
     row24 = ttk.Frame(diagnoseFieldset)
     row24.pack(fill='x', side=tk.TOP, anchor='w')
     scan_BT = tk.Button(row24, text="scan-i", font=(ff, fs), command=lambda: scan('i'))
