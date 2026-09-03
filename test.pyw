@@ -297,8 +297,7 @@ def main():
         resikoInfeksi_VAR.set('luka' in keluhan_low)
         resikoJatuh_VAR.set(usia_STRING > 60)
  
-    def terima_transfer():   
-        time.sleep(2)   
+    def acceptTransfer():
         pyautogui.write(rr_INPUT.get())
         pyautogui.press('tab')  
         pyautogui.write(sistole_INPUT.get())
@@ -316,12 +315,10 @@ def main():
         pyautogui.press('tab')  
         pyautogui.write('isokor')
         pyautogui.press('tab')  
-        pyautogui.write('positif')   
+        pyautogui.write('+/+')   
         pyautogui.press('tab')  
-        pyautogui.press('tab')  
-        pyautogui.press('tab')   
-        pyautogui.press('enter')
-        messagebox.showinfo("?", "Terima transfer selesai") 
+        pyautogui.press('space')  
+        pyautogui.press('tab')    
   
     def cppt(opt):   
         global diagnosaKeperawatan 
@@ -2313,7 +2310,13 @@ def main():
         pyautogui.press('space') 
 
     def automate(opt): 
-        time.sleep(2) 
+        time.sleep(1)
+        openLink('transfer')
+        messagebox.showinfo('Notifikasi', 'isi form terima transfer?')
+        time.sleep(1)
+        acceptTransfer()
+        messagebox.showinfo('Notifikasi', 'lanjut discharge planning?')
+        time.sleep(1) 
         openLink('discharge')  
         notify("Isi discharge planning?")
         time.sleep(1)
@@ -2543,7 +2546,9 @@ def main():
         if opt == 'handover': 
             newURL = re.sub(r"(rawatinap/)[^?]+", r"\1handover_dewasa1", url)  
         if opt == 'ttv':
-            newURL = re.sub(r"(rawatinap/)[^?]+", r"\1pemeriksaan_ttv", url)  
+            newURL = re.sub(r"(rawatinap/)[^?]+", r"\1pemeriksaan_ttv", url) 
+        if opt == 'transfer':
+            newURL = re.sub(r"(rawatinap/)[^?]+", r"\1transfer_pasien", url) 
  
         pyperclip.copy(newURL)  
         pyautogui.hotkey('ctrl', 'v')   
@@ -2957,6 +2962,11 @@ def main():
                     continue  
                 routine('all', line) 
 
+            time.sleep(0.5)
+            pyautogui.hotkey('ctrl', 'l')
+            pyperclip.copy('http://20.20.20.6/app.mersi-hospital/live.rme/login/log_out')  
+            pyautogui.hotkey('ctrl', 'v') 
+            pyautogui.press('enter') 
             messagebox.showinfo('Notifikasi', "Sudah login sebagai PJ?") 
             while True:
                 routine('handover') 
