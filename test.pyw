@@ -318,7 +318,7 @@ def main():
         pyautogui.write('+/+')   
         pyautogui.press('tab')  
         pyautogui.press('space')  
-        pyautogui.press('tab')    
+        pyautogui.press('enter')    
   
     def cppt(opt):   
         global diagnosaKeperawatan 
@@ -2487,7 +2487,7 @@ def main():
             pyautogui.press('tab')  
             pyautogui.write(diastole_INPUT.get())
             pyautogui.press('tab')  
-            pyautogui.write(nadi_INPUT.get()) 
+            pyautogui.write(nadi_INPUT.get())  
 
         if opt == 'routine' :
             data = row.split('-')  
