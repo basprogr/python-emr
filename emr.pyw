@@ -2987,8 +2987,7 @@ def main():
     # ========== Main apps GUI ==========
  
     app = tk.Tk()
-    app.title("males-banget")   
-    app.geometry("+0+0")
+    app.geometry("+0+50")
     app.after(7200000, app.destroy)
     app.attributes('-topmost', True)   
     ff = 'Calibri'
