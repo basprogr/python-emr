@@ -2748,7 +2748,7 @@ def main():
         
         # Sinkronisasi
         diagnose_map = { 
-            "bersihan jalan napas": bersihanJalanNapas_VAR,
+            "bersihan jalan napas tidak efektif": bersihanJalanNapas_VAR,
             "diare": diare_VAR,
             "hipertermia": hipertermia_VAR,
             "hipervolemia": hipervolemia_VAR,
