@@ -1,0 +1,52 @@
+<tr valign="top"> 
+	<td>
+        <label>2026-09-19 12:10:01</label> 
+        <button type="button" name="btncopy" id="btncopy" data-sub="Nyeri ulu hati skala 3 hilang timbul (Gastrotomy nrembes)">
+            Salin Ke Form
+        </button> 
+	</td>
+   <td>Perawat</td> 
+   <td> 
+        <strong>S :</strong> Nyeri ulu hati skala 3 hilang timbul (Gastrotomy nrembes)<br><strong>O :</strong> Rr : 20 x/menit<br />
+        Suhu : 36.9 &deg;C<br />
+        Nadi : 60 x/menit<br />
+        TD : 90/61 mmHg<br />
+        SpO2 : 99% dengan O2<br />
+        GCS 456<br />  
+   </td> 
+</tr>
+
+<tr valign="top"> 
+	<td>
+        <label>2026-09-19 14:10:01</label> 
+        <button type="button" name="btncopy" id="btncopy" data-sub="Nyeri ulu hati skala 2 hilang timbul (Gastrotomy nrembes)" > 
+            Salin Ke Form
+        </button> 
+	</td>
+   <td>Perawat</td> 
+   <td> 
+        <strong>S :</strong> Nyeri ulu hati skala 3 hilang timbul (Gastrotomy nrembes)<br><strong>O :</strong> Rr : 20 x/menit<br />
+        Suhu : 36.9 &deg;C<br />
+        Nadi : 60 x/menit<br />
+        TD : 90/61 mmHg<br />
+        SpO2 : 99% dengan O2<br />
+        GCS 456<br />  
+   </td> 
+</tr>
+<tr valign="top"> 
+	<td>
+        <label>2026-09-19 14:10:01</label> 
+        <button type="button" name="btncopy" id="btncopy" data-sub="Nyeri ulu hati skala 2 hilang timbul (Gastrotomy nrembes)" > 
+            Salin Ke Form
+        </button> 
+	</td>
+   <td>Dokter</td> 
+   <td> 
+        <strong>S :</strong> Nyeri ulu hati skala 3 hilang timbul (Gastrotomy nrembes)<br><strong>O :</strong> Rr : 20 x/menit<br />
+        Suhu : 36.9 &deg;C<br />
+        Nadi : 60 x/menit<br />
+        TD : 90/61 mmHg<br />
+        SpO2 : 99% dengan O2<br />
+        GCS 456<br />  
+   </td> 
+</tr>
