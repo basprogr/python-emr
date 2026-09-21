@@ -1,0 +1,57 @@
+aku ingin membuat aplikasi dengan python selenium
+untuk melakukan automasi pengisian rekam medis elektronik
+dengan beberapa mekanisme seperti membuka tab baru, membuka link,
+melakukan klik, login ke halaman, dan masih banyak lagi
+
+aplikasi ini juga menggunakan tkinter untuk mengisi data tanda tanda vital beberapa pasien
+yang nantinya digunakan untuk mengisi form dihalaman
+setiap baris menandakan data 1 pasien.
+data itu berada didalam tk.Text 
+setiap pasien dipisahkan dengan baris yang berbeda
+setiap data didalam baris dipisahkan dengan '-'
+dan ditulis sesuai format sebagai berikut
+
+namaRuang-sistole-diastole-nadi-spo2-statusOksigen-suhu-respirasi
+misal :
+301 Bed A-110-81-71-97-0-36.1-21
+301 Bed B-120-82-72-98-1-36.2-22
+
+setelah tk.Text terisi, aku ingin ada tombol untuk memulai automasi.
+
+setelah di klik, jalankan mekanisme berikut :
+buka url 'http://20.20.20.6/app.mersi-hospital/live/login'
+tunggu hingga halaman selesai dimuat,
+isi <input id="username"> dengan '20224015'
+isi <input id="password"> dengan '2024'
+lalu klik enter. 
+beri jeda 2 detik, lalu arahkan ke 'http://20.20.20.6/app.mersi-hospital/live/ri/entry/transaksi_mrs_aktif'
+beri jeda 5 detik
+
+ambil list ruangan dari tk.text
+cari ruangan di dalam tabel, misal '301 Bed A', lalu klik row itu, lalu klik <a id="btn-rme">
+hal itu akan membuka data pasien di tab baru.
+beri jeda 2 detik
+ambil URL yang ada, modifikasi, dan arahkan ke URL yang sudah dimodifikasi, dari URL seperti ini :
+http://20.20.20.6/app.mersi-hospital/live.rme/rawatinap/asperawat_ranap?idx=260915549&idp=517187&baru=0
+jadi seperti ini :
+http://20.20.20.6/app.mersi-hospital/live.rme/rawatinap/pemeriksaan_ttv?idx=260915549&idp=517187
+
+tunggu sampai halaman selesai dimuat, lalu klik elemen ini
+<h3><a data-card-widget="collapse" style="cursor:pointer;">Tulis Data</a></h3>
+beri jeda 1 detik. 
+isi <input id="txtresp"> sesuai data respirasi.
+isi <input id="txtspo2"> sesuai data spo2.
+isi <td><label><input type="radio" name="txtinso2" id="txtinso2" value="0" checked>Tidak</label><label><input type="radio" name="txtinso2" id="txtinso2" value="2">Ya</label></td> pilih tidak jika statusOksigen=0 dan pilih ya jika statusOksigen > 0
+isi <input id="txttemp"> sesuai data suhu.
+isi <input id="txtbp"> sesuai data sistole.
+isi <input id="txtbp1"> sesuai data diastole.
+isi <input id="txthr"> sesuai data nadi.
+
+jeda waktu 1 detik lalu klik tombol <button id="save">
+proses save akan mereload halaman, beri jeda 5 detik.
+
+ambil url sekarang, modifikasi dari :
+http://20.20.20.6/app.mersi-hospital/live.rme/rawatinap/pemeriksaan_ttv?idx=260915549&idp=517187
+menjadi :
+http://20.20.20.6/app.mersi-hospital/live.rme/rawatinap/cppt?idx=260915549&idp=517187
+lalu arahkan ke url itu.
