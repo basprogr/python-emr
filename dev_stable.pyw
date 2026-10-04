@@ -1,3 +1,4 @@
+import re
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -15,8 +16,7 @@ def proses_satu_pasien(data_pasien):
     pecah = data_pasien.split('-')
     if len(pecah) < 8:
         print(f"Format salah untuk data: {data_pasien}")
-        return
-        
+        return 
     nama_ruang   = pecah[0].strip()
     sistole      = pecah[1].strip()
     diastole     = pecah[2].strip()
@@ -24,11 +24,8 @@ def proses_satu_pasien(data_pasien):
     spo2         = pecah[4].strip()
     status_oks   = int(pecah[5].strip())
     suhu         = pecah[6].strip()
-    respirasi    = pecah[7].strip()
-
-    chrome_options = Options() 
-    # chrome_options.add_argument("--headless") 
-    
+    respirasi    = pecah[7].strip() 
+    chrome_options = Options()   
     chrome_options.add_experimental_option("detach", True)
     driver = webdriver.Chrome(options=chrome_options)
 
@@ -70,6 +67,7 @@ def proses_satu_pasien(data_pasien):
             )
             collapse_btn.click()
             time.sleep(1)  
+            
             driver.find_element(By.ID, "txtresp").clear()
             driver.find_element(By.ID, "txtresp").send_keys(respirasi) 
             driver.find_element(By.ID, "txtspo2").clear()
@@ -95,6 +93,9 @@ def proses_satu_pasien(data_pasien):
                 EC.element_to_be_clickable((By.ID, "save"))
             )
             btn_save.click() 
+
+
+
             WebDriverWait(driver, 15).until(
                 lambda d: d.execute_script("return document.readyState") == "complete"
             )
@@ -163,29 +164,19 @@ def proses_satu_pasien(data_pasien):
                     print("Berhasil memperbarui txtevaluasi_s via CKEditor API.")
                 except Exception as e_s:
                     print(f"Gagal memproses txtevaluasi_s: {e_s}") 
-            
+             
                 try:
-                    time.sleep(0.5) 
-                    text_o = driver.execute_script("return CKEDITOR.instances.txtevaluasi_o.getData();") or ""
- 
-                    if "Rr :" in text_o and " O2" in text_o:
-                        idx_start = text_o.find("Rr :")
-                        idx_end = text_o.find(" O2", idx_start) # Aman dari SpO2 karena mencari " O2" (ada spasi)
-                        if idx_end != -1: 
-                            sisa_belakang = text_o[idx_end + len(" O2"):]
-                            text_o = text_o[:idx_start]
-                    else:
-                        sisa_belakang = ""
-             
+                    time.sleep(0.5)
+                    text_o = driver.execute_script("return CKEDITOR.instances.txtevaluasi_o.getData();") or "" 
+                    simple_pattern = r"Rr\s*:\s*.*?SpO2\s*:\s*\d+%\s*(?:dengan\s+O2(?:\s*\d+\s*(?:lpm|Lpm|L/min|L/mnt)?)?|tanpa\s+O2)?"
+                    text_bersih = re.sub(simple_pattern, "", text_o, flags=re.IGNORECASE | re.DOTALL) 
                     if status_oks > 0:
-                        str_oksigen = f"dengan O2 {status_oks}lpm" # Sesuaikan format spasi lpm-nya
+                        str_oksigen = f"dengan O2 {status_oks} lpm"
                     else:
-                        str_oksigen = "tanpa O2"
-             
-                    new_vitals = f"Rr : {respirasi} x/menit\nSuhu : {suhu} °C\nNadi : {nadi} x/menit\nTD : {sistole}/{diastole} mmHg\nSpO2 : {spo2}% {str_oksigen}"
-                    final_text = text_o.strip() + "\n" + new_vitals + sisa_belakang 
-                    driver.execute_script("CKEDITOR.instances.txtevaluasi_o.setData(arguments[0]);", final_text) 
-            
+                        str_oksigen = "tanpa O2" 
+                        new_vitals = f"Rr : {respirasi} x/menit\nSuhu : {suhu} °C\nNadi : {nadi} x/menit\nTD : {sistole}/{diastole} mmHg\nSpO2 : {spo2}% {str_oksigen}"
+                        final_text = text_bersih.strip() + "\n" + new_vitals 
+                        driver.execute_script("CKEDITOR.instances.txtevaluasi_o.setData(arguments[0]);", final_text)
                 except Exception as e_o:
                     print(f"Error: {e_o}")
             
@@ -214,8 +205,9 @@ def proses_satu_pasien(data_pasien):
                         if key in text_a:
                             matched_keys.append(key)
                             formatted_a_list.append(val) 
-                    if formatted_a_list:
-                        formatted_a_html = "<br>".join(formatted_a_list)
+                    if formatted_a_list: 
+                        numbered_items = [f"{i+1}. {item}" for i, item in enumerate(formatted_a_list)]
+                        formatted_a_html = "<br>".join(numbered_items) 
                         driver.execute_script("CKEDITOR.instances.txtevaluasi_a.setData(arguments[0]);", formatted_a_html)
                 except Exception as e_a:
                     print(f"Error on txtevaluasi_a: {e_a}")
@@ -242,7 +234,8 @@ def proses_satu_pasien(data_pasien):
                         list_p.extend(p_dict[k]) 
                 try:
                     if list_p:
-                        list_p_html = "<br>".join(list_p)
+                        numbered_items = [f"{i+1}. {item}" for i, item in enumerate(list_p)]
+                        list_p_html = "<br>".join(numbered_items) 
                         driver.execute_script("CKEDITOR.instances.txtevaluasi_p.setData(arguments[0]);", list_p_html)
                 except Exception as e_p:
                     print(f"Error on txtevaluasi_p: {e_p}")
@@ -321,7 +314,8 @@ def proses_satu_pasien(data_pasien):
                         list_instruksi.extend(instruksi_dict[k]) 
                 try:
                     if list_instruksi:
-                        list_instruksi_html = "<br>".join(list_instruksi)
+                        numbered_items = [f"{i+1}. {item}" for i, item in enumerate(list_instruksi)]
+                        list_instruksi_html = "<br>".join(numbered_items) 
                         driver.execute_script("CKEDITOR.instances.txtinstruksi.setData(arguments[0]);", list_instruksi_html)
                 except Exception as e_instruksi:
                     print(f"Error on txtinstruksi: {e_instruksi}")
@@ -341,19 +335,21 @@ def proses_satu_pasien(data_pasien):
                 select_shift = Select(driver.find_element(By.ID, "selshift"))
                 select_shift.select_by_value(val_shift) 
                 time.sleep(1)  
-                try:
-                    btn_save_cppt = WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.XPATH, "//button[@id='save' and @name='save' and @value='save']"))
-                    ) 
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", btn_save_cppt)
-                    time.sleep(0.5)  
+
+                if val_shift != 'I' :
                     try:
-                        btn_save_cppt.click()
-                    except Exception:
-                        driver.execute_script("arguments[0].click();", btn_save_cppt) 
-                    time.sleep(2)
-                except Exception as e_save:
-                    print(f"Error clicking save CPPT: {e_save}")
+                        btn_save_cppt = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.XPATH, "//button[@id='save' and @name='save' and @value='save']"))
+                        ) 
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", btn_save_cppt)
+                        time.sleep(0.5)  
+                        try:
+                            btn_save_cppt.click()
+                        except Exception:
+                            driver.execute_script("arguments[0].click();", btn_save_cppt) 
+                        time.sleep(2)
+                    except Exception as e_save:
+                        print(f"Error clicking save CPPT: {e_save}")
              
                 current_url_cppt = driver.current_url
                 if "cppt" in current_url_cppt:
@@ -590,9 +586,7 @@ def jalankan_semua_automasi(data_teks):
  
     maxWindow = min(len(baris_data), 10) 
     with ThreadPoolExecutor(max_workers=maxWindow) as executor:
-        executor.map(proses_satu_pasien, baris_data)
-        
-    messagebox.showinfo("Selesai", "Semua data TTV dan CPPT pasien berhasil diproses!")
+        executor.map(proses_satu_pasien, baris_data) 
 
 def tombol_mulai_klik(): 
     data_teks = text_input.get("1.0", END)

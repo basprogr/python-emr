@@ -1,0 +1,61 @@
+aku sedang bekerja dengan selenium, aku melakukan automasi untuk pengisian tanda vital pasien di form berikut :
+
+</div>    <div class="card-body">           <form method="post" name="form_ttv" id="form_ttv" action="http://20.20.20.6/app.mersi-hospital/live.rme/rawatinap/save_ttv">	<input type="hidden" name="txtidxdaftar" id="txtidxdaftar" value="261000002">					<input type="hidden" name="txtidxpasien" id="txtidxpasien" value="88969">					<input type="hidden" name="txtidkamar" id="txtidkamar" value="92">					<input type="hidden" name="txtnott" id="txtnott" value="2120">					<input type="hidden" name="txtjenis_layanan" id="txtjenis_layanan" value="4">					<input type="hidden" name="txtID" id="txtID" value="">							<input type="hidden" name="txtkelas" id="txtkelas" value="IIB">	 <table width="100%" class="table table-bordered table-striped table-hover">  <tbody>    <tr>      <td width="20%">&nbsp;</td>      <td>&nbsp;</td>      <td width="10%" align="center">SKOR</td>    </tr>    <tr>      <td width="20%">Tgl Input</td>      <td>				<div class="input-group ">						 <input type="text" name="txttgl" id="txttgl"  class="form-control form-control-sm required" value="2026-10-04 13:24:28" maxlength="20" placeholder="dd-mm-yyyy HH:mm" data-toggle="tooltip" data-placement="top" title="[Tanggal Input]"/>					   <label class="input-group-append btn btn-sm btn-light" for="txttgl" style="margin-bottom:0px;">						  <span class="fa fa-calendar" style="padding-top:2px;"></span>					   </label>					   </div>			</td>      <td width="10%">&nbsp;</td>    </tr>    <tr>      <td width="20%">Resp. Rate (laju pernafasan/menit)</td>      <td>      <input type="number" name="txtresp" id="txtresp" min="1" max="60" minlength="0" maxlength="5" class="required form-control form-control-sm" value="" placeholder="1-60">      </td>      <td width="10%"><span id="skor1">            </span></td>    </tr>    <tr>      <td width="20%">SpO<sub>2 </sub>/ saturasi oksigen(%)</td>      <td>	  <input type="number" name="txtspo2" id="txtspo2" min="1" max="100" minlength="0" maxlength="5" class="required form-control form-control-sm" value="" placeholder="1-100"></td>      <td width="10%"><span id="skor2">            </span></td>    </tr>    <tr>      <td width="20%">Inspired O<sub>2</sub> /  (suplemen O<sub>2</sub>) </td>      <td><label class="radio-inline font-weight-normal"><input type="radio" name="txtinso2" id="txtinso2" value="0" class="simple required" data-skor="0" checked> Tidak  &nbsp; </label><label class="radio-inline font-weight-normal"><input type="radio" name="txtinso2" id="txtinso2" value="2" class="simple required" data-skor="2"> Ya  &nbsp; </label></td>      <td width="10%"><span id="skor3"></span></td>    </tr>    <tr>      <td width="20%">Temperatur / Suhu (°C)</td>      <td>  <input type="number" name="txttemp" id="txttemp" min="20" max="45" minlength="0" maxlength="5" class="required form-control form-control-sm" value="" placeholder="20-45">       </td>      <td width="10%"><span id="skor4">            </span> </td>    </tr>    <tr>      <td width="20%"> Blood pressure use sistolic BP/ tekanan darah sistolik (mmHg)</td>      <td>			<input type="number" name="txtbp" id="txtbp" min="0" max="280" minlength="0" maxlength="5" class="required form-control form-control-sm" value="" placeholder="0-280">       			</td>      <td width="10%"><span id="skor5">            </span></td>    </tr>     <tr>      <td width="20%"> Blood pressure use diastolik BP/ tekanan darah diastolik (mmHg)</td>      <td>			 <input type="number" name="txtbp1" id="txtbp1" min="0" max="150" minlength="0" maxlength="5" class="required form-control form-control-sm" value="" placeholder="0-150"> 			 </td>      <td width="10%">&nbsp;</td>    </tr>    <tr>      <td width="20%">Heart Rate (laju jantung/menit)</td>      <td>			 <input type="number" name="txthr" id="txthr" min="1" max="200" minlength="0" maxlength="5" class="required form-control form-control-sm" value="" placeholder="1-200"> 			</td>      <td width="10%"><span id="skor6">            </span></td>    </tr>    <tr>      <td width="20%">Level of Consciousness/kesadaran </td>      <td><select name="txtlc" id="txtlc" class="required form-control form-control-sm">      <option value="">--Pilih--</option><option value="0" data-skor="0" selected>Alert/sadar penuh</option><option value="3" data-skor="3">V/P/U (respon terhadap verbal, pain (nyeri)  unrespon (tidak respon))</option></select>   </td>      <td width="10%"><span id="skor7"></span></td>    </tr>    <tr>      <td colspan="2" align="right">Total Score </td>      <td width="10%"><strong><div id="totalskor"></div></strong>      <input type="hidden" name="txttotalskor" id="txttotalskor" value="">      </td>    </tr>
+
+aku membuat automasi dengan skrip ini :
+
+driver.find_element(By.ID, "txtresp").clear()
+            driver.find_element(By.ID, "txtresp").send_keys(respirasi) 
+            driver.find_element(By.ID, "txtspo2").clear()
+            driver.find_element(By.ID, "txtspo2").send_keys(spo2) 
+            if status_oks == 0:
+                radio_tidak = driver.find_element(By.XPATH, "//input[@id='txtinso2' and @value='0']")
+                if not radio_tidak.is_selected():
+                    radio_tidak.click()
+            else:
+                radio_ya = driver.find_element(By.XPATH, "//input[@id='txtinso2' and @value='2']")
+                if not radio_ya.is_selected():
+                    radio_ya.click() 
+            driver.find_element(By.ID, "txttemp").clear()
+            driver.find_element(By.ID, "txttemp").send_keys(suhu) 
+            driver.find_element(By.ID, "txtbp").clear()
+            driver.find_element(By.ID, "txtbp").send_keys(sistole) 
+            driver.find_element(By.ID, "txtbp1").clear()
+            driver.find_element(By.ID, "txtbp1").send_keys(diastole) 
+            driver.find_element(By.ID, "txthr").clear()
+            driver.find_element(By.ID, "txthr").send_keys(nadi) 
+            time.sleep(1)
+            btn_save = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "save"))
+            )
+            btn_save.click() 
+
+nah disitu ada total skor akhir yang mempengaruhi banyaknya pengisian tanda vital harus diulang, dengan ketentuan ini :
+
+Skor 0-1Pasien kondisi stabil. monitoring tiap shiftSkor 2-4Katim/PJ shift melakukan pengkajian ulang, laporkan kepada dokter jaga jika kondisi masih tetap atau peningkatan skor, observasi setiap 2 jamSkor 5-6Katim/PJ shift melakukan pengkajian ulang, kemudian dilaporkan ke DPJP untuk mendapatkan instruksi tatalaksana,pertimbangkan pasien pindah ke ruang intensif, observasi setiap 1 jamSkor >= 7Dokter jaga wajib datang, katim/PJ shift dan dokter jaga melakukan pengkajian ulang kemudian dilaporkan ke DPJP untuk mendapatkan instruksi tatalaksana, pindahkan pasien ke ruang intensif, observasi tiap 15 menit
+
+aku menggunakan referensi shif ini :
+now = datetime.now()
+                current_date_str = now.strftime("%Y-%m-%d")
+                tomorrow_date_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+                jam = now.hour
+             
+                if 6 < jam < 14:
+                    val_txttgl = f"{current_date_str} 13:00:00"
+                    val_txttgl_operan = f"{current_date_str} 14:00:00"
+                    val_shift = "I"  # Pagi
+                elif 13 < jam < 21:
+                    val_txttgl = f"{current_date_str} 20:00:00"
+                    val_txttgl_operan = f"{current_date_str} 21:00:00"
+                    val_shift = "II"  # Siang
+                else:
+                    if jam >= 21:
+                        val_txttgl = f"{tomorrow_date_str} 06:00:00"
+                        val_txttgl_operan = f"{tomorrow_date_str} 07:00:00"
+                    else:
+                        val_txttgl = f"{current_date_str} 06:00:00"
+                        val_txttgl_operan = f"{current_date_str} 07:00:00"
+                    val_shift = "III"  # Malam
+
+nah misal aku masuk shif pagi, maka aku input di awal jam +1 jam, jadi kalau skornya 2-4 kan setiap 2 jam, maka jam 8, jam 10, jam 12, jam 14, tapi tidak perlu penjadwalan, ini hanya inputan saja
+nah,jika sudah paham,aku akanmengirimkan file .py milikku?
