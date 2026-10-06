@@ -352,8 +352,8 @@ def main():
         if opt == 'c' or opt == 'copy':  
             pyautogui.hotkey('ctrl', 'a')  
             pyautogui.hotkey('ctrl', 'c')  
-            s = pyperclip.paste()  
-            s_res = re.sub(r'pasien mengatakan\s*', '', s, flags=re.IGNORECASE)   
+            s = pyperclip.paste()   
+            s_res = re.sub(r'\b(pasien|px|klien|mengeluh|mengatakan)\b\s*', '', s, flags=re.IGNORECASE)
             pyperclip.copy(s_res)  
             pyautogui.hotkey('ctrl', 'v')    
             pyautogui.press('tab')  

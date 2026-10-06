@@ -155,15 +155,15 @@ def proses_satu_pasien(data_pasien):
                 time.sleep(0.5)
                 txttgl_elem.send_keys(Keys.ESCAPE)
                 time.sleep(1.0)
-             
+              
                 try:
                     time.sleep(1)
-                    text_s = driver.execute_script("return CKEDITOR.instances.txtevaluasi_s.getData();") or "" 
-                    text_s = text_s.replace("pasien mengatakan", "").replace("px mengatakan", "").strip() 
+                    text_s = driver.execute_script("return CKEDITOR.instances.txtevaluasi_s.getData();") or ""
+                    text_s = re.sub(r'\b(pasien|px|klien|mengeluh|mengatakan)\b\s*', '', text_s, flags=re.IGNORECASE).strip()  
                     driver.execute_script("CKEDITOR.instances.txtevaluasi_s.setData(arguments[0]);", text_s)
                     print("Berhasil memperbarui txtevaluasi_s via CKEditor API.")
                 except Exception as e_s:
-                    print(f"Gagal memproses txtevaluasi_s: {e_s}") 
+                    print(f"Gagal memproses txtevaluasi_s: {e_s}")
              
                 try:
                     time.sleep(0.5)
