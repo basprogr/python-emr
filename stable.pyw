@@ -1,9 +1,11 @@
 import re
+import requests
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from tkinter import *
+import tkinter as tk  
 from tkinter import messagebox
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -12,6 +14,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 
+SUPABASE_URL = "https://qjwmhtnfowkmwoflwhzy.supabase.co" 
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqd21odG5mb3drbXdvZmx3aHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NjAwMTIsImV4cCI6MjEwMjUzNjAxMn0.ERWHxYn3GJJKHXJaJaZ2vnypcEM0DF8QE4DR_mjF-3s"
+ 
 def proses_satu_pasien(data_pasien): 
     pecah = data_pasien.split('-')
     if len(pecah) < 8:
@@ -588,28 +593,170 @@ def jalankan_semua_automasi(data_teks):
     with ThreadPoolExecutor(max_workers=maxWindow) as executor:
         executor.map(proses_satu_pasien, baris_data) 
 
-def tombol_mulai_klik(): 
-    data_teks = text_input.get("1.0", END)
+def routine(): 
+    data_teks = input_vitalSign.get("1.0", END)
     t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks,))
     t.start()
  
-root = Tk()
-root.title("Auto Input TTV & CPPT Pasien - Mersi Hospital (Simultan)")
-root.geometry("650x450")
+def fetchRoomFromDatabase():    
+    btn_fetch.config(state=tk.DISABLED)
+    root.update_idletasks()
+        
+    try:
+        today_str = datetime.now().strftime("%Y%m%d") 
+        url = f"{SUPABASE_URL}/rest/v1/logbook"
 
-label_info = Label(root, text="Masukkan data TTV (Bisa banyak baris, 1 baris 1 pasien):\nFormat: namaRuang-sistole-diastole-nadi-spo2-statusOksigen-suhu-respirasi", justify=LEFT)
-label_info.pack(padx=10, pady=10, anchor="w") 
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+        } 
+        
+        # Kita minta kolom 'room' DAN 'vital_signs' dari Supabase
+        params = {
+            "select": "room,vital_signs",
+            "created_at": f"eq.{today_str}",
+            "order": "room.asc",
+        }
+        
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json() 
+            input_vitalSign.delete("1.0", tk.END)
+            
+            if not data:
+                input_vitalSign.insert(
+                    tk.END, f"Belum ada data ruangan untuk hari ini ({today_str})"
+                )
+                return  
+            
+            formatted_lines = []
+            for item in data:
+                room_name = item.get("room", "")
+                vital = item.get("vital_signs")
+                
+                # Jika vital_signs sudah ada isinya (tersimpan di DB)
+                if vital:
+                    # Ambil sesuai urutan defaults: sistole, diastole, nadi, spo2, status_oksigen, suhu, rr, kesadaran
+                    sistole = vital.get("sistole", "None")
+                    diastole = vital.get("diastole", "None")
+                    nadi = vital.get("nadi", "None")
+                    spo2 = vital.get("spo2", "None")
+                    status_oksigen = vital.get("status_oksigen", "0")
+                    suhu = vital.get("suhu", "None")
+                    rr = vital.get("rr", "None")
+                    kesadaran = vital.get("kesadaran", "1")
+                    
+                    # Gabungkan kembali dengan pemisah tanda hubung '-'
+                    line = f"{room_name}-{sistole}-{diastole}-{nadi}-{spo2}-{status_oksigen}-{suhu}-{rr}-{kesadaran}"
+                else:
+                    # Kalau belum ada vital signs, tampilkan nama ruangnya saja
+                    line = room_name
+                    
+                formatted_lines.append(line)
+                
+            final_output = "\n".join(formatted_lines)
+            input_vitalSign.insert(tk.END, final_output)
+            
+        else:
+            input_vitalSign.delete("1.0", tk.END)
+            input_vitalSign.insert(
+                tk.END, f"Gagal mengambil data! (Error Code: {response.status_code})"
+            )
+            
+    except Exception as e:
+        input_vitalSign.delete("1.0", tk.END)
+        input_vitalSign.insert(tk.END, f"Error Koneksi: {e}")
+        
+    finally:
+        btn_fetch.config(state='normal')
+  
+def save_formatted_to_database():
+    btn_save.config(state="disabled")
+    root.update_idletasks()
 
-text_input = Text(root, height=8, width=75)
-text_input.pack(padx=10, pady=5) 
+    try:
+        input_text = input_vitalSign.get("1.0", tk.END).strip()
+        if not input_text:
+            messagebox.showwarning("Peringatan", "Tidak ada data untuk disimpan!")
+            btn_save.config(state="normal")
+            return
 
-contoh_data = (
-    "310 Bed D-190-100-80-98-3-36.2-20\n"
-    "310 Bed C-200-80-75-99-1-36.5-18" 
-)
-text_input.insert(END, contoh_data) 
+        # --- LANGKAH 1: Jalankan proses formatting terlebih dahulu ---
+        defaults = [None, None, None, None, '97', '0', '36', '20', '1']
+        processed_lines = [] 
+        
+        for line in input_text.splitlines():
+            if not line.strip(): 
+                continue 
+            parts = line.split('-')
+            # Lengkapi bagian yang kurang dengan defaults
+            complete_parts = [parts[i].strip() if i < len(parts) and parts[i].strip() != '' and parts[i].strip() != 'None' else defaults[i] for i in range(9)]
+            processed_lines.append("-".join(str(p) for p in complete_parts)) 
+            
+        # Tampilkan kembali hasil format yang rapi ke widget Text
+        final_output = "\n".join(processed_lines)
+        input_vitalSign.delete("1.0", tk.END) 
+        input_vitalSign.insert("1.0", final_output)
 
-btn_mulai = Button(root, text="Mulai Automasi Simultan", bg="green", fg="white", font=("Arial", 10, "bold"), command=tombol_mulai_klik)
-btn_mulai.pack(padx=10, pady=15) 
+        # --- LANGKAH 2: Kirim data yang sudah diformat ke Supabase ---
+        today_str = datetime.now().strftime("%Y%m%d")
+        url = f"{SUPABASE_URL}/rest/v1/logbook"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+        }
 
+        success_count = 0
+        for line in processed_lines.splitlines() if isinstance(processed_lines, str) else processed_lines:
+            # Pecah kembali string yang sudah rapi
+            parts = line.split('-')
+            room_name = parts[0]
+            
+            if not room_name:
+                continue
+
+            # Bungkus ke JSONB vital_signs
+            vital_data = {
+                "sistole": parts[1] if parts[1] != 'None' else None,
+                "diastole": parts[2] if parts[2] != 'None' else None,
+                "nadi": parts[3] if parts[3] != 'None' else None,
+                "spo2": parts[4] if parts[4] != 'None' else None,
+                "status_oksigen": parts[5],
+                "suhu": parts[6] if parts[6] != 'None' else None,
+                "rr": parts[7] if parts[7] != 'None' else None,
+                "kesadaran": parts[8]
+            }
+
+            payload = {
+                "vital_signs": vital_data
+            }
+
+            # Update ke Supabase berdasarkan room & created_at
+            patch_url = f"{url}?room=eq.{room_name}&created_at=eq.{today_str}"
+            response = requests.patch(patch_url, headers=headers, json=payload, timeout=10)
+            
+            if response.status_code in [200, 204]:
+                success_count += 1
+
+        messagebox.showinfo("Berhasil", f"Berhasil memformat dan menyimpan {success_count} data ke Supabase!")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Terjadi kesalahan: {e}")
+    finally:
+        btn_save.config(state="normal")
+  
+
+root = Tk()  
+input_vitalSign = Text(root, height=10, width=50)
+input_vitalSign.pack(padx=2, pady=2) 
+
+btn_fetch = Button(root, text="fetch", command=fetchRoomFromDatabase)
+btn_fetch.pack(side=tk.LEFT, padx='1')   
+btn_save = Button(root, text="Sync", command=save_formatted_to_database)
+btn_save.pack(side=tk.LEFT, padx='1')
+btn_mulai = Button(root, text="routine", command=routine)
+btn_mulai.pack(side=tk.LEFT, padx='1') 
 root.mainloop()
