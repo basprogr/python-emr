@@ -30,9 +30,8 @@ def proses_satu_pasien(data_pasien):
         print(f"Format salah untuk data: {data_pasien}")
         return 
     
-    nama_ruang = pecah[0].strip()
-    
-    # Konfigurasi Chrome (Bisa hapus --headless=new jika ingin melihat browser tampil di layar)
+    nama_ruang = pecah[0].strip() 
+
     chrome_options = Options()   
     chrome_options.add_argument("--headless=new") 
     chrome_options.add_argument("--no-sandbox")
@@ -227,7 +226,9 @@ def jalankan_semua_automasi(data_teks):
     with ThreadPoolExecutor(max_workers=maxWindow) as executor:
         executor.map(proses_satu_pasien, baris_data) 
 
-def routine(): 
+def routine():  
+    btn_mulai.config(state=tk.DISABLED)
+    root.update_idletasks()
     data_teks = input_vitalSign.get("1.0", END)
     t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks,))
     t.start()  

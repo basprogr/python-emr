@@ -1,208 +1,3 @@
-ini script ku :
-
-SUPABASE_URL = "https://qjwmhtnfowkmwoflwhzy.supabase.co/rest/v1/logbook" 
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqd21odG5mb3drbXdvZmx3aHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NjAwMTIsImV4cCI6MjEwMjUzNjAxMn0.ERWHxYn3GJJKHXJaJaZ2vnypcEM0DF8QE4DR_mjF-3s"
-
-HEADERS = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "application/json",
-    "Prefer": "return=minimal"
-}
- 
-def proses_satu_pasien(data_pasien): 
-    pecah = data_pasien.split('-')
-    if len(pecah) < 8:
-        print(f"Format salah untuk data: {data_pasien}")
-        return 
-    
-    nama_ruang   = pecah[0].strip()
-    # Tanda vital tidak disimpan di sini karena ditangani oleh fungsi sync/save terpisah,
-    # tapi kita ambil untuk keperluan parsing baris jika dibutuhkan.
-    
-    chrome_options = Options()   
-    chrome_options.add_experimental_option("detach", True)
-    driver = webdriver.Chrome(options=chrome_options)
-
-    url1 = 'http://20.20.20.6/app.mersi-hospital/live/login'
-    url2 = "http://20.20.20.6/app.mersi-hospital/live/ri/entry/transaksi_mrs_aktif" 
-
-    try: 
-        driver.get(url1)   
-        username_field = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "username"))
-        )
-        username_field.send_keys("20224015") 
-        password_field = driver.find_element(By.ID, "password")
-        password_field.send_keys("2024") 
-        password_field.send_keys(Keys.RETURN) 
-        time.sleep(2) 
- 
-        driver.get(url2)  
-        row_target = WebDriverWait(driver, 15).until(
-            EC.element_to_be_clickable((By.XPATH, f"//tr[contains(., '{nama_ruang}')]"))
-        )
-        row_target.click()  
-        time.sleep(1)  
-        btn_rme = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.ID, "btn-rme"))
-        )
-        btn_rme.click()  
-        WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))
-        driver.switch_to.window(driver.window_handles[-1]) 
-        time.sleep(2)  
-        current_url = driver.current_url
-        
-        no_rm = "-"
-        nama_pasien = "-"
-        diagnosa_medis = "-"
-
-        if "asperawat_ranap" in current_url: 
-            handoverURL = current_url.replace("asperawat_ranap", "handover_dewasa1")  
-            driver.get(handoverURL) 
-            
-            try:
-                no_rm_elem = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'No RM')]/following-sibling::div"))
-                )
-                no_rm = no_rm_elem.text.replace(":", "").strip()
-
-                nama_pasien_elem = driver.find_element(By.XPATH, "//div[contains(text(), 'Nama Pasien')]/following-sibling::div//strong")
-                nama_pasien = nama_pasien_elem.text.strip()
-            except Exception as e:
-                print(f"Gagal mengambil identitas pasien: {e}")
-
-            try:
-                first_row = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, "//table[@id='datalist']/tbody/tr[1]"))
-                ) 
-                situation_td = first_row.find_element(By.XPATH, "./td[4]")
-                situation_text = situation_td.text 
-                for line in situation_text.split("\n"):
-                    if "Diagnosa Medis" in line:
-                        diagnosa_medis = line.split(":", 1)[1].strip()
-                        break
-            except Exception as e:
-                print(f"Gagal mengambil diagnosa: {e}")
-
-            print(f"Nama Pasien    : {nama_pasien}")
-            print(f"No RM          : {no_rm}")
-            print(f"Diagnosa Medis : {diagnosa_medis}") 
- 
-            # Push data Identitas Pasien ke Supabase
-            payload = {
-                "room": nama_ruang,
-                "patient_name": nama_pasien,
-                "no_rm": no_rm,
-                "diagnosa_medis": diagnosa_medis,
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-
-            try:
-                response = requests.post(SUPABASE_URL, json=payload, headers=HEADERS)
-                if response.status_code in [200, 201]:
-                    print(f"Berhasil menyimpan data identitas pasien {nama_pasien} ke database!")
-                else:
-                    print(f"Gagal menyimpan ke database. Status: {response.status_code}, Respon: {response.text}")
-            except Exception as req_err:
-                print(f"Terjadi kesalahan koneksi: {req_err}")
- 
-    except Exception as e:
-        print(f"Error pada ruang {nama_ruang}: {e}")
-    finally: 
-        driver.quit() # Diaktifkan kembali agar tidak meninggalkan sisa proses Chrome terbuka di background
-
-def save_formatted_to_database():
-    btn_save.config(state="disabled")
-    root.update_idletasks()
-
-    try:
-        input_text = input_vitalSign.get("1.0", tk.END).strip()
-        if not input_text:
-            messagebox.showwarning("Peringatan", "Tidak ada data untuk disimpan!")
-            btn_save.config(state="normal")
-            return 
-
-        defaults = [None, None, None, None, '97', '0', '36', '20', '1']
-        processed_lines = []  
-        for line in input_text.splitlines():
-            if not line.strip(): 
-                continue 
-            parts = line.split('-')
-            complete_parts = [parts[i].strip() if i < len(parts) and parts[i].strip() and parts[i].strip() != 'None' else defaults[i] for i in range(9)]
-            processed_lines.append("-".join(str(p) for p in complete_parts)) 
-             
-        final_output = "\n".join(processed_lines)
-        input_vitalSign.delete("1.0", tk.END) 
-        input_vitalSign.insert("1.0", final_output)
-
-        success_count = 0
-        for line in processed_lines: 
-            parts = line.split('-')
-            room_name = parts[0]
-            
-            if not room_name:
-                continue 
-
-            vital_data = {
-                "sistole": parts[1] if parts[1] != 'None' else None,
-                "diastole": parts[2] if parts[2] != 'None' else None,
-                "nadi": parts[3] if parts[3] != 'None' else None,
-                "spo2": parts[4] if parts[4] != 'None' else None,
-                "status_oks": parts[5],
-                "suhu": parts[6] if parts[6] != 'None' else None,
-                "respirasi": parts[7] if parts[7] != 'None' else None,
-                "kesadaran": parts[8]
-            }
-
-            payload = {
-                "vital_signs": vital_data
-            }
-
-            # Update ke Supabase berdasarkan room (menggunakan filter rlike/eq)
-            patch_url = f"{SUPABASE_URL}?room=eq.{room_name}&order=created_at.desc&limit=1"
-            response = requests.patch(patch_url, headers=HEADERS, json=payload, timeout=10)
-            
-            if response.status_code in [200, 204]:
-                success_count += 1
-
-        messagebox.showinfo("Berhasil", f"Berhasil memperbarui {success_count} data tanda vital di Supabase!")
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Terjadi kesalahan: {e}")
-    finally:
-        btn_save.config(state="normal")
-
-def jalankan_semua_automasi(data_teks):
-    baris_data = [b.strip() for b in data_teks.strip().split('\n') if b.strip()]
-    if not baris_data:
-        messagebox.showerror("Error", "Data pasien masih kosong!")
-        return
- 
-    maxWindow = min(len(baris_data), 10) 
-    with ThreadPoolExecutor(max_workers=maxWindow) as executor:
-        executor.map(proses_satu_pasien, baris_data) 
-
-def routine(): 
-    data_teks = input_vitalSign.get("1.0", END)
-    t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks,))
-    t.start()  
-
-root = Tk()  
-input_vitalSign = Text(root, height=10, width=50)
-input_vitalSign.pack(padx=2, pady=2) 
-btn_mulai = Button(root, text="routine", command=routine)
-btn_mulai.pack(side=tk.LEFT, padx='1') 
-btn_save = Button(root, text="sync", command=save_formatted_to_database)  
-btn_save.pack(side=tk.LEFT, padx='1') 
-root.mainloop()
-
-dan ini table logbook milikku :
-
-## Table `logbook`
-
-### Columns
-
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `int8` | Primary Identity |
@@ -214,6 +9,330 @@ dan ini table logbook milikku :
 | `vital_signs` | `jsonb` |  Nullable |
 | `no_rm` | `varchar` |  Nullable |
 | `diagnosa_medis` | `varchar` |  Nullable |
-  
 
-  entah kenapa fungsi def proses_satu_pasien(data_pasien) tidak berjalan dengan baik
+dan ini scriptku : 
+
+<!DOCTYPE html>
+<html lang="id">
+<head> 
+  <meta charset="UTF-8">
+  <title>Logbook</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
+  <style> 
+    :root { --bg: #efefe5; --primary: #2a5c84; --card-bg: #ffffff; --card-border: #e5e7eb; --text-main: #111827; --text-muted: #6b7280;  --accent-red: #dc2626; --input-bg: #f3f4f6;} 
+    * { box-sizing: border-box; font-family: monospace; font-size: 0.8rem; } 
+    body { margin: 0; padding: 10px; background-color: var(--bg); color: var(--text-main); } 
+    div#syncStatus { position: fixed; top: 0; left: 0; width: 100%; height: 32px; line-height: 32px; background-color: #2a5c84; color: #ffffff; text-align: center; font-weight: bold;letter-spacing: 0.5px; z-index: 1000; border-bottom: 1px solid #ffedd5; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }  
+    div.header { display: flex; justify-content: space-between; align-items: center; padding-top: 32px; max-width: 500px; margin: 0 auto 10px; }
+    details#roomList { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    details#roomList summary { cursor: pointer; color: var(--primary); font-weight: bold; outline: none;}
+    details#roomList table { margin-top: 8px; width: 100%; border-collapse: collapse;}
+    details#roomList td { padding: 3px 4px;  color: var(--text-muted);}
+    details#roomList input[type="checkbox"] { accent-color: var(--primary); cursor: pointer;}
+    details#roomList button {  background: var(--primary); color: #ffffff; border: none; padding: 6px; border-radius: 4px; font-weight: bold; cursor: pointer;  text-transform: uppercase; letter-spacing: 0.5px;}
+    details#roomList button:hover { opacity: 0.9;}
+    input[type='date']#filterDate {  background: var(--card-bg); color: var(--text-main); border: 1px solid var(--card-border); padding: 6px 10px; border-radius: 6px; outline: none;  box-shadow: 0 1px 2px rgba(0,0,0,0.03);}
+    div#patientContainer {  width: 100%;  max-width: 500px;  padding: 0;  box-sizing: border-box; }
+    div.patient-block {  padding: 8px;  background-color: var(--card-bg);  border: 1px solid var(--card-border);  margin-bottom: 12px;  border-radius: 8px;  box-shadow: 0 1px 3px rgba(0,0,0,0.04);}   
+    div.patient-header {  padding: 6px 10px;  background: #f3f4f6;  font-weight: bold;  color: var(--text-main); border-radius: 6px;  display: flex; align-items: center; gap: 6px;}
+    input.patient-name {   border: 1px solid var(--card-border);  background: #ffffff;  color: var(--text-main); padding: 4px 8px;  border-radius: 4px;   outline: none; flex-grow: 1;}
+    input.patient-name:focus { border-color: var(--primary);}
+    div.patient-content {  padding: 10px 0 5px;  display: grid;  grid-template-columns: calc(50% - 5px) calc(50% - 5px);  gap: 10px; }  
+    .task-input, .therapy-input {  margin-bottom: 8px;  display: flex; gap: 4px;}
+    input[type='text'].task, input.todo-input {  font-family: var(--font-mono); width: 100%;  padding: 5px 8px;  background: var(--input-bg); border: 1px solid var(--card-border); color: var(--text-main); border-radius: 4px;  outline: none;}
+    input[type='text'].task:focus, input.todo-input:focus { border-color: var(--primary); background: #ffffff;}
+    .task-input button, .therapy-input button { font-family: var(--font-mono); background: var(--primary); color: #ffffff; border: none; padding: 0 8px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+      .bullet-list {  list-style: none;  padding-left: 0;  margin: 0; }
+    .bullet-list li { display: flex; align-items: center; gap: 8px; padding: 5px 6px; cursor: pointer; border-radius: 4px; margin-bottom: 3px; } 
+    .bullet-list li.status-1 .bullet-text { text-decoration: line-through; color: #9ca3af; font-weight: normal; } 
+    .bullet-list li.status-2 .bullet-text { text-decoration: none; color: var(--accent-red); font-weight: bold; } 
+    .remove-room { text-decoration: none; color: var(--accent-red); font-weight: bold; margin: 0 2px; }  
+    .delete-btn { color: #9ca3af; cursor: pointer; } 
+  </style>
+</head>
+<body>
+
+  <div id="syncStatus">Halo, selamat bekerja</div> 
+  <div class="header">
+    <div style="width: 48%;"> 
+      <details id="roomList">
+        <summary style="cursor: pointer;">Pilih Ruangan</summary>
+        <table>
+          <tr>
+            <td><label><input type="checkbox" name="room" value="301 Bed A"> 301a</label></td>
+            <td><label><input type="checkbox" name="room" value="301 Bed B"> 301b</label></td>
+          </tr>
+          <tr>
+            <td><label><input type="checkbox" name="room" value="302 Bed A"> 302a</label></td>
+            <td><label><input type="checkbox" name="room" value="302 Bed B"> 302b</label></td>
+          </tr> 
+          <tr>
+            <td><label><input type="checkbox" name="room" value="303 Bed A"> 303a</label></td>
+            <td><label><input type="checkbox" name="room" value="303 Bed B"> 303b</label></td>
+          </tr> 
+        </table>  
+        <button onclick="addSelectedRooms()" style="width: 100%; margin-top: 5px;">Tambah</button> 
+      </details>
+    </div> 
+    
+    <input class="task" type="date" id="filterDate" onchange="loadLogbookByDate()">  
+  </div>
+
+  <div style="display: flex; justify-content: center; width: 100%;">
+    <div id="patientContainer"></div>
+  </div> 
+  <script> 
+      const p = new URLSearchParams(window.location.search); 
+      const su = p.get("su"); 
+      const sa = p.get("sa");   
+      const supabaseURL = `https://${su}.supabase.co`; 
+      const supabaseClient = window.supabase.createClient(supabaseURL, sa);  
+   
+    function getSelectedDate() {
+      const dateInput = document.getElementById('filterDate');
+      const date = dateInput.value;
+      return date ? date.replace(/-/g, '') : null;
+    }
+ 
+    function setSyncingStatus() {
+      document.getElementById('syncStatus').textContent = 'Syncing...';
+    }
+
+    function updateSyncStatus() {
+      const now = new Date();
+      const hari = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now);
+      const formatted = `${hari}, ${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`;
+      document.getElementById('syncStatus').textContent = `Synced: ${formatted}`;
+    }
+
+    function addSelectedRooms() {
+      const checked = document.querySelectorAll('input[name="room"]:checked');
+      const container = document.getElementById('patientContainer');
+
+      checked.forEach(cb => {
+        if (!Array.from(container.children).some(div => div.dataset.room === cb.value)) {
+          container.appendChild(generatePatientBlock(cb.value));
+        }
+        cb.checked = false;
+        document.getElementById("roomList").open = false;
+      }); 
+      autoSave();
+    }
+
+    function debounce(func, delay) {
+      let timeout;
+      return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+      };
+    }
+
+    function generatePatientBlock(room) {
+      const block = document.createElement('div');
+      block.className = 'patient-block';
+      block.dataset.room = room;
+
+      block.innerHTML = `  
+        <div class="patient-header">
+          ${room} / <a href="#_" class="remove-room">x</a> / <input class="patient-name" type="text" placeholder="Pasien">
+        </div>
+        <div class="patient-content">
+          <div class="task-column">
+            <div class="task-input"> 
+              <input type="text" class="todo-input task" placeholder="Task"><button>+</button> 
+            </div>
+            <ul class="bullet-list"></ul>
+          </div>
+          <div class="therapy-column">
+            <div class="therapy-input">
+              <input type="text" class="todo-input task" placeholder="Therapy"><button>+</button> 
+            </div>
+            <ul class="bullet-list"></ul>
+          </div>
+        </div>
+      `;
+
+      block.querySelector('.patient-name').addEventListener('input', debounce(autoSave, 1000));
+
+      block.querySelectorAll('.task-input button, .therapy-input button').forEach(btn => {
+        btn.addEventListener('click', () => addBullet(btn));
+      });
+ 
+      block.querySelector('.remove-room').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const created_at = getSelectedDate() || new Date().toISOString().slice(0,10).replace(/-/g, '');
+        
+        setSyncingStatus();
+        const { error } = await supabaseClient
+          .from('logbook')
+          .delete()
+          .eq('room', block.dataset.room)
+          .eq('created_at', created_at);
+
+        if (error) {
+          console.error('Delete failed:', error);
+          document.getElementById('syncStatus').textContent = '❌ Delete failed';
+        } else {
+          block.remove();
+          updateSyncStatus();
+        }
+      });
+
+      activateEnterListeners(block);
+      return block;
+    }
+
+    function createListItem(ulElement, text, statusValue = 0) {
+      const li = document.createElement('li');
+      li.className = 'clickable';
+      li.dataset.status = statusValue;
+      if (statusValue > 0) {
+        li.classList.add(`status-${statusValue}`);
+      }
+
+      li.innerHTML = `
+        <span class="delete-btn">&#9746;</span>
+        <span class="bullet-text">${text}</span> 
+      `;
+
+      li.querySelector('.bullet-text').addEventListener('click', () => {
+        let currentStatus = parseInt(li.dataset.status) || 0;
+        if (currentStatus > 0) li.classList.remove(`status-${currentStatus}`);
+
+        currentStatus = (currentStatus + 1) % 3;
+        li.dataset.status = currentStatus;
+
+        if (currentStatus > 0) li.classList.add(`status-${currentStatus}`);
+        autoSave();
+      });
+
+      li.querySelector('.delete-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        li.remove();
+        autoSave();
+      });
+
+      ulElement.appendChild(li);
+    }
+
+    function addBullet(button) {
+      const input = button.previousElementSibling;
+      const ul = button.closest('.task-column, .therapy-column')?.querySelector('.bullet-list');
+      const text = input.value.trim();
+
+      if (!text) return;
+      createListItem(ul, text, 0);
+
+      input.value = '';
+      input.focus();
+      autoSave();
+    }
+
+    function activateEnterListeners(scope = document) {
+      scope.querySelectorAll('.todo-input').forEach(input => {
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            input.nextElementSibling?.click();
+          }
+        });
+      });
+    }
+
+    function renderList(listElement, items) {
+      if (!items || !Array.isArray(items)) return;
+      items.forEach(t => {
+        let initialStatus = 0;
+        if (t.status !== undefined) {
+          initialStatus = parseInt(t.status);
+        } else if (t.done === true) {
+          initialStatus = 1;
+        }
+        createListItem(listElement, t.text, initialStatus);
+      });
+    }
+ 
+    async function loadLogbookByDate() {
+      const date = getSelectedDate();
+      if (!date) return;
+
+      setSyncingStatus();
+      const { data, error } = await supabaseClient
+        .from('logbook')
+        .select('room, patient_name, tasks, therapies')
+        .eq('created_at', date)
+        .order('room', { ascending: true });
+
+      if (error) {
+        console.error('Load failed:', error);
+        document.getElementById('syncStatus').textContent = '❌ Load failed';
+        return;
+      }
+
+      const container = document.getElementById('patientContainer');
+      container.innerHTML = '';
+
+      data.forEach(entry => {
+        const block = generatePatientBlock(entry.room);
+        block.querySelector('.patient-name').value = entry.patient_name || '';
+
+        renderList(block.querySelector('.task-column .bullet-list'), entry.tasks);
+        renderList(block.querySelector('.therapy-column .bullet-list'), entry.therapies);
+
+        container.appendChild(block);
+      });
+      updateSyncStatus();
+    }
+ 
+    async function autoSave() {
+      const created_at = getSelectedDate() || new Date().toISOString().slice(0,10).replace(/-/g, '');
+      const blocks = document.querySelectorAll('.patient-block');
+      
+      const payload = Array.from(blocks).map(block => ({
+        room: block.dataset.room,
+        patient_name: block.querySelector('.patient-name')?.value.trim() || '',
+        tasks: Array.from(block.querySelectorAll('.task-column .bullet-list li')).map(li => ({
+          text: li.querySelector('.bullet-text')?.textContent.trim() || '',
+          status: parseInt(li.dataset.status) || 0
+        })),
+        therapies: Array.from(block.querySelectorAll('.therapy-column .bullet-list li')).map(li => ({
+          text: li.querySelector('.bullet-text')?.textContent.trim() || '',
+          status: parseInt(li.dataset.status) || 0
+        })),
+        created_at
+      }));
+
+      if (payload.length === 0) return;
+
+      setSyncingStatus();
+
+      const { error } = await supabaseClient
+        .from('logbook')
+        .upsert(payload, { onConflict: 'room,created_at' });
+
+      if (error) {
+        console.error('Auto-save failed:', error);
+        document.getElementById('syncStatus').textContent = `❌ Sync failed: ${error.message}`;
+      } else {
+        updateSyncStatus();
+      }
+    }
+ 
+    window.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      
+      const dateInput = document.getElementById('filterDate');
+      dateInput.value = `${year}-${month}-${day}`;
+      loadLogbookByDate();
+    });
+  </script>
+</body>
+</html>
+
+aku ingin mengganti <input class="patient-name"> dengan span dan di isi dari fetch database.
+dibawahnya aku ingin menambahkan diagnosa dari fetch database.
+dibawahnya lagi aku ingin menambahkan vital_signs dari fetch database dengan format TD {sistole}/{diastole}, N : {nadi}, S : {suhu}, RR : {rr}, SpO2 : {spo2}, 02 : {status_oksigen} 

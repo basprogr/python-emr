@@ -13,10 +13,16 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys 
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-
-SUPABASE_URL = "https://qjwmhtnfowkmwoflwhzy.supabase.co" 
+ 
+SUPABASE_URL = "https://qjwmhtnfowkmwoflwhzy.supabase.co/rest/v1/logbook" 
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqd21odG5mb3drbXdvZmx3aHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NjAwMTIsImV4cCI6MjEwMjUzNjAxMn0.ERWHxYn3GJJKHXJaJaZ2vnypcEM0DF8QE4DR_mjF-3s"
  
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+}
 def proses_satu_pasien(data_pasien): 
     pecah = data_pasien.split('-')
     if len(pecah) < 8:
@@ -30,6 +36,14 @@ def proses_satu_pasien(data_pasien):
     status_oks   = int(pecah[5].strip())
     suhu         = pecah[6].strip()
     respirasi    = pecah[7].strip() 
+
+    chrome_options = Options()   
+    # chrome_options.add_argument("--headless=new") 
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+          
     chrome_options = Options()   
     chrome_options.add_experimental_option("detach", True)
     driver = webdriver.Chrome(options=chrome_options)
@@ -61,519 +75,599 @@ def proses_satu_pasien(data_pasien):
         WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))
         driver.switch_to.window(driver.window_handles[-1]) 
         time.sleep(2)  
+
         current_url = driver.current_url
+
+        no_rm = "-"
+        nama_pasien = "-"
+        diagnosa_medis = "-"
         
-        if "asperawat_ranap" in current_url:
-            new_url = current_url.replace("asperawat_ranap", "pemeriksaan_ttv")  
-            driver.get(new_url) 
-            
-            collapse_btn = WebDriverWait(driver, 15).until(
-                EC.element_to_be_clickable((By.XPATH, "//h3/a[@data-card-widget='collapse' and contains(text(), 'Tulis Data')]"))
-            )
-            collapse_btn.click()
-            time.sleep(1)  
-            
-            driver.find_element(By.ID, "txtresp").clear()
-            driver.find_element(By.ID, "txtresp").send_keys(respirasi) 
-            driver.find_element(By.ID, "txtspo2").clear()
-            driver.find_element(By.ID, "txtspo2").send_keys(spo2) 
-            if status_oks == 0:
-                radio_tidak = driver.find_element(By.XPATH, "//input[@id='txtinso2' and @value='0']")
-                if not radio_tidak.is_selected():
-                    radio_tidak.click()
-            else:
-                radio_ya = driver.find_element(By.XPATH, "//input[@id='txtinso2' and @value='2']")
-                if not radio_ya.is_selected():
-                    radio_ya.click() 
-            driver.find_element(By.ID, "txttemp").clear()
-            driver.find_element(By.ID, "txttemp").send_keys(suhu) 
-            driver.find_element(By.ID, "txtbp").clear()
-            driver.find_element(By.ID, "txtbp").send_keys(sistole) 
-            driver.find_element(By.ID, "txtbp1").clear()
-            driver.find_element(By.ID, "txtbp1").send_keys(diastole) 
-            driver.find_element(By.ID, "txthr").clear()
-            driver.find_element(By.ID, "txthr").send_keys(nadi) 
-            time.sleep(1)
-            btn_save = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.ID, "save"))
-            )
-            btn_save.click() 
+        if "asperawat_ranap" in current_url: 
+            handoverURL = current_url.replace("asperawat_ranap", "handover_dewasa1")  
+            driver.get(handoverURL) 
+
+            try:
+                no_rm_elem = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'No RM')]/following-sibling::div"))
+                )
+                no_rm = no_rm_elem.text.replace(":", "").strip()
+        
+                nama_pasien_elem = driver.find_element(By.XPATH, "//div[contains(text(), 'Nama Pasien')]/following-sibling::div//strong")
+                nama_pasien = nama_pasien_elem.text.strip()
+            except Exception as e:
+                print(f"[WARNING] Gagal mengambil identitas pasien untuk ruang {nama_ruang}: {e}")
+        
+            try:
+                first_row = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, "//table[@id='datalist']/tbody/tr[1]"))
+                ) 
+                situation_td = first_row.find_element(By.XPATH, "./td[4]")
+                situation_text = situation_td.text 
+                for line in situation_text.split("\n"):
+                    if "Diagnosa Medis" in line:
+                        diagnosa_medis = line.split(":", 1)[1].strip()
+                        break
+            except Exception as e:
+                print(f"[WARNING] Gagal mengambil diagnosa untuk ruang {nama_ruang}: {e}")
+         
+            print("\n" + "="*50)
+            print(f" DATA BERHASIL DIUTIP (Ruang: {nama_ruang})")
+            print("="*50)
+            print(f" Nama Pasien    : {nama_pasien}")
+            print(f" No RM          : {no_rm}")
+            print(f" Diagnosa Medis : {diagnosa_medis}")
+            print("="*50 + "\n")
+         
+            # --- PUSH ATAU UPDATE DATA KE SUPABASE (Format Tanggal: YYYYMMDD) ---
+            tanggal_hari_ini = datetime.now().strftime("%Y%m%d")
+        
+            payload = {
+                "room": nama_ruang,
+                "patient_name": nama_pasien,
+                "no_rm": no_rm,
+                "diagnosa_medis": diagnosa_medis,
+                "created_at": tanggal_hari_ini
+            }
+        
+            try:
+                # Cek apakah sudah ada data untuk room ini dengan tanggal yang sama
+                cek_url = f"{SUPABASE_URL}?room=eq.{nama_ruang}&created_at=eq.{tanggal_hari_ini}"
+                resp_cek = requests.get(cek_url, headers=HEADERS)
+                existing_data = resp_cek.json()
+        
+                if existing_data and len(existing_data) > 0:
+                    # Jika sudah ada di hari yang sama, update (PATCH) baris tersebut agar tidak double
+                    row_id = existing_data[0]['id']
+                    patch_url = f"{SUPABASE_URL}?id=eq.{row_id}"
+                    response = requests.patch(patch_url, json=payload, headers=HEADERS)
+
+                    if response.status_code in [200, 204]:
+                        print(f"-> [UPDATE SUKSES] Data pasien {nama_pasien} (Ruang: {nama_ruang}) diperbarui.")
+                    else:
+                        print(f"-> [GAGAL UPDATE] Status: {response.status_code}, Respon: {response.text}")
+                else:
+                    # Jika belum ada, buat baru (POST)
+                    response = requests.post(SUPABASE_URL, json=payload, headers=HEADERS)
+                    if response.status_code in [200, 201]:
+                        print(f"-> [INSERT SUKSES] Data pasien {nama_pasien} (Ruang: {nama_ruang}) ditambahkan.")
+                    else:
+                        print(f"-> [GAGAL INSERT] Status: {response.status_code}, Respon: {response.text}")
+        
+            except Exception as req_err:
+                print(f"-> [ERROR] Kesalahan koneksi Supabase: {req_err}")
+ 
+            current_url = driver.current_url 
+            if "handover_dewasa1" in current_url:
+                vitalSign_URL = current_url.replace("handover_dewasa1", "pemeriksaan_ttv")  
+                driver.get(vitalSign_URL) 
+                
+                collapse_btn = WebDriverWait(driver, 15).until(
+                    EC.element_to_be_clickable((By.XPATH, "//h3/a[@data-card-widget='collapse' and contains(text(), 'Tulis Data')]"))
+                )
+                collapse_btn.click()
+                time.sleep(1)  
+                
+                driver.find_element(By.ID, "txtresp").clear()
+                driver.find_element(By.ID, "txtresp").send_keys(respirasi) 
+                driver.find_element(By.ID, "txtspo2").clear()
+                driver.find_element(By.ID, "txtspo2").send_keys(spo2) 
+                if status_oks == 0:
+                    radio_tidak = driver.find_element(By.XPATH, "//input[@id='txtinso2' and @value='0']")
+                    if not radio_tidak.is_selected():
+                        radio_tidak.click()
+                else:
+                    radio_ya = driver.find_element(By.XPATH, "//input[@id='txtinso2' and @value='2']")
+                    if not radio_ya.is_selected():
+                        radio_ya.click() 
+                driver.find_element(By.ID, "txttemp").clear()
+                driver.find_element(By.ID, "txttemp").send_keys(suhu) 
+                driver.find_element(By.ID, "txtbp").clear()
+                driver.find_element(By.ID, "txtbp").send_keys(sistole) 
+                driver.find_element(By.ID, "txtbp1").clear()
+                driver.find_element(By.ID, "txtbp1").send_keys(diastole) 
+                driver.find_element(By.ID, "txthr").clear()
+                driver.find_element(By.ID, "txthr").send_keys(nadi) 
+                time.sleep(1)
+                btn_save = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.ID, "save"))
+                )
+                btn_save.click() 
 
 
-
-            WebDriverWait(driver, 15).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
-            time.sleep(1.5)  
-            current_url_cppt = driver.current_url
-            if "pemeriksaan_ttv" in current_url_cppt:
-                cppt_url = current_url_cppt.replace("pemeriksaan_ttv", "cppt")
-                driver.get(cppt_url)
 
                 WebDriverWait(driver, 15).until(
                     lambda d: d.execute_script("return document.readyState") == "complete"
                 )
-                time.sleep(1) 
-                try:
-                    btn_copy_perawat = WebDriverWait(driver, 10).until(
-                        EC.element_to_be_clickable((By.XPATH, "(//tr[./td[2][contains(text(), 'Perawat')]])[1]//button[@name='btncopy']"))
-                    )
-                    btn_copy_perawat.click() 
-                    time.sleep(2)
-                except Exception as e_cppt:
-                    print(f"Error: {e_cppt}")
-              
-                now = datetime.now()
-                current_date_str = now.strftime("%Y-%m-%d")
-                tomorrow_date_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
-                jam = now.hour
-             
-                if 6 < jam < 14:
-                    val_txttgl = f"{current_date_str} 13:00:00"
-                    val_txttgl_operan = f"{current_date_str} 14:00:00"
-                    val_shift = "I"  # Pagi
-                elif 13 < jam < 21:
-                    val_txttgl = f"{current_date_str} 20:00:00"
-                    val_txttgl_operan = f"{current_date_str} 21:00:00"
-                    val_shift = "II"  # Siang
-                else:
-                    if jam >= 21:
-                        val_txttgl = f"{tomorrow_date_str} 06:00:00"
-                        val_txttgl_operan = f"{tomorrow_date_str} 07:00:00"
-                    else:
-                        val_txttgl = f"{current_date_str} 06:00:00"
-                        val_txttgl_operan = f"{current_date_str} 07:00:00"
-                    val_shift = "III"  # Malam
-             
-                txttgl_elem = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.ID, "txttgl"))
-                ) 
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", txttgl_elem)
-                time.sleep(0.5) 
-                try:
-                    txttgl_elem.click()
-                except Exception:
-                    driver.execute_script("arguments[0].click();", txttgl_elem) 
-                time.sleep(0.3)
-                txttgl_elem.clear()
-                txttgl_elem.send_keys(val_txttgl)
-                time.sleep(0.5)
-                txttgl_elem.send_keys(Keys.ESCAPE)
-                time.sleep(1.0)
-              
-                try:
-                    time.sleep(1)
-                    text_s = driver.execute_script("return CKEDITOR.instances.txtevaluasi_s.getData();") or ""
-                    text_s = re.sub(r'\b(pasien|px|klien|mengeluh|mengatakan)\b\s*', '', text_s, flags=re.IGNORECASE).strip()  
-                    driver.execute_script("CKEDITOR.instances.txtevaluasi_s.setData(arguments[0]);", text_s)
-                    print("Berhasil memperbarui txtevaluasi_s via CKEditor API.")
-                except Exception as e_s:
-                    print(f"Gagal memproses txtevaluasi_s: {e_s}")
-             
-                try:
-                    time.sleep(0.5)
-                    text_o = driver.execute_script("return CKEDITOR.instances.txtevaluasi_o.getData();") or "" 
-                    simple_pattern = r"Rr\s*:\s*.*?SpO2\s*:\s*\d+%\s*(?:dengan\s+O2(?:\s*\d+\s*(?:lpm|Lpm|L/min|L/mnt)?)?|tanpa\s+O2)?"
-                    text_bersih = re.sub(simple_pattern, "", text_o, flags=re.IGNORECASE | re.DOTALL) 
-                    if status_oks > 0:
-                        str_oksigen = f"dengan O2 {status_oks} lpm"
-                    else:
-                        str_oksigen = "tanpa O2" 
-                        new_vitals = f"Rr : {respirasi} x/menit\nSuhu : {suhu} °C\nNadi : {nadi} x/menit\nTD : {sistole}/{diastole} mmHg\nSpO2 : {spo2}% {str_oksigen}"
-                        final_text = text_bersih.strip() + "\n" + new_vitals 
-                        driver.execute_script("CKEDITOR.instances.txtevaluasi_o.setData(arguments[0]);", final_text)
-                except Exception as e_o:
-                    print(f"Error: {e_o}")
-            
-                try:
-                    time.sleep(0.5)
-                    text_a = (driver.execute_script("return CKEDITOR.instances.txtevaluasi_a.getData();") or "").lower() 
-                    mapping_a = {
-                        'bersihan': 'bersihan jalan napas tidak efektif',
-                        'diare': 'diare',
-                        'hipertermi': 'hipertermia',
-                        'hipervolemi': 'hipervolemia',
-                        'hipovolemi': 'hipovolemia',
-                        'integritas': 'gangguan integritas kulit dan jaringan',
-                        'ketidakstabilan': 'ketidakstabilan kadar glukosa darah',
-                        'nausea': 'nausea',
-                        'nyeri': 'nyeri akut',
-                        'curah jantung': 'penurunan curah jantung',
-                        'adaptif': 'penurunan kapasitas adaptif intrakranial',
-                        'pola': 'pola napas tidak efektif',
-                        'jatuh': 'resiko jatuh',
-                        'infeksi': 'resiko infeksi'
-                    } 
-                    matched_keys = []
-                    formatted_a_list = []
-                    for key, val in mapping_a.items():
-                        if key in text_a:
-                            matched_keys.append(key)
-                            formatted_a_list.append(val) 
-                    if formatted_a_list: 
-                        numbered_items = [f"{i+1}. {item}" for i, item in enumerate(formatted_a_list)]
-                        formatted_a_html = "<br>".join(numbered_items) 
-                        driver.execute_script("CKEDITOR.instances.txtevaluasi_a.setData(arguments[0]);", formatted_a_html)
-                except Exception as e_a:
-                    print(f"Error on txtevaluasi_a: {e_a}")
-             
-                p_dict = {
-                    'bersihan': ['Frekuensi napas membaik', 'Pola napas membaik', 'wheezing/ronchi menurun'],
-                    'diare': ['tidak ada tanda gejala hipovolemia', 'konsistensi feses membaik', 'kontrol pengeluaran feses meningkat', 'frekuensi defekasi membaik'],
-                    'hipertermi': ['Kulit tidak kemerahan', 'Suhu tubuh membaik'],
-                    'hipervolemi': ['Turgor kulit membaik', 'Keluaran urin meningkat', 'Edema menurun'],
-                    'hipovolemi': ['kekuatan nadi meningkat', 'perasaan lemah menurun', 'tekanan darah membaik', 'turgor kulit membaik'],
-                    'integritas': ['Perfusi perifer baik'],
-                    'ketidakstabilan': ['Kadar glukosa dalam darah membaik'],
-                    'nausea': ['Nafsu makan meningkat', 'keluhan mual menurun'],
-                    'nyeri': ['keluhan nyeri menurun', 'grimace menurun'],
-                    'curah jantung': ['status hemodinamik membaik'],
-                    'adaptif': ['Refleks neurologis membaik', 'Fungsi kognitif meningkat'],
-                    'pola': ['frekuensi napas membaik', 'dispneu menurun'],
-                    'jatuh': ['tidak ada kejadian jatuh'],
-                    'infeksi': ['tidak terjadi tanda tanda infeksi', 'kadar sel darah putih dalam batas normal']
-                } 
-                list_p = []
-                for k in matched_keys:
-                    if k in p_dict:
-                        list_p.extend(p_dict[k]) 
-                try:
-                    if list_p:
-                        numbered_items = [f"{i+1}. {item}" for i, item in enumerate(list_p)]
-                        list_p_html = "<br>".join(numbered_items) 
-                        driver.execute_script("CKEDITOR.instances.txtevaluasi_p.setData(arguments[0]);", list_p_html)
-                except Exception as e_p:
-                    print(f"Error on txtevaluasi_p: {e_p}")
-             
-                instruksi_dict = {
-                    'bersihan': [
-                        'Monitor pola napas',
-                        'Monitor adanya bunyi napas tambahan',
-                        'Monitor saturasi oksigen'
-                    ],
-                    'diare': [
-                        'Monitor intake dan output cairan',
-                        'Monitor tanda dan gejala hipovolemia',
-                        'Monitor jumlah pengeluaran diare'
-                    ],
-                    'integritas': [ 
-                        'Identifikasi penyebab gangguan integritas kulit'
-                    ],
-                    'hipertermi': [
-                        'Monitor Suhu tubuh',
-                        'Longgarkan atau lepaskan pakaian',
-                        'Lakukan pendinginan eksternal'
-                    ],
-                    'hipervolemi': [
-                        'Periksa tanda & gejala hipervolemia',
-                        'Monitor Status hemodinamik',
-                        'Monitor intake & output cairan',
-                        'Batasi asupan cairan dan garam'
-                    ],
-                    'hipovolemi': [
-                        'Periksa tanda dan gejala hipovolemia',
-                        'Monitor intake dan output cairan',
-                        'Kolaborasi pemberian cairan'
-                    ],
-                    'ketidakstabilan': [
-                        'Identifikasi tanda dan gejala hipoglikemi',
-                        'Monitor kadar glukosa darah, jika perlu'
-                    ],
-                    'nausea': [
-                        'Monitor keseimbangan cairan dan elektrolit',
-                        'Identifikasi isyarat nonverbal ketidaknyamanan',
-                        'Kontrol lingkungan penyebab muntah'
-                    ],
-                    'nyeri': [
-                        'Identifikasi lokasi, karakteristik, durasi, frekuensi, kualitas, intensitas nyeri',
-                        'Identifikasi skala nyeri',
-                        'Identifikasi respon nyeri non verbal',
-                        'Identifikasi factor yang memperberat dan memperingan nyeri'
-                    ],
-                    'curah jantung': [
-                        'Monitor status kardiopulmonal',
-                        'Monitor ststus oksigenasi'
-                    ],
-                    'adaptif': [
-                        'Monitor penurunan tingkat kesaadaran',
-                        'Monitor status neurologis'
-                    ],
-                    'pola': [
-                        'Monitor pola napas',
-                        'Palpasi kesimetrisan ekspansi paru',
-                        'Monitor saturasi oksigen'
-                    ],
-                    'jatuh': [
-                        'Identifikasi faktor risiko jatuh',
-                        'pastikan roda tempat tidur selalu dalam kondisi terkunci',
-                        'pasang handrail tempat tidur'
-                    ],
-                    'infeksi': [
-                        'Monitor tanda dan gejala infeksi local dan sistemik.'
-                    ]
-                }
-            
-                list_instruksi = []
-                for k in matched_keys:
-                    if k in instruksi_dict:
-                        list_instruksi.extend(instruksi_dict[k]) 
-                try:
-                    if list_instruksi:
-                        numbered_items = [f"{i+1}. {item}" for i, item in enumerate(list_instruksi)]
-                        list_instruksi_html = "<br>".join(numbered_items) 
-                        driver.execute_script("CKEDITOR.instances.txtinstruksi.setData(arguments[0]);", list_instruksi_html)
-                except Exception as e_instruksi:
-                    print(f"Error on txtinstruksi: {e_instruksi}")
-             
-                radio_seloperan = driver.find_element(By.XPATH, "//input[@id='seloperan' and @value='Ya']")
-                if not radio_seloperan.is_selected():
-                    radio_seloperan.click()
-             
-                txttgl_operan_elem = driver.find_element(By.ID, "txttgl_operan")
-                txttgl_operan_elem.click()
-                time.sleep(0.3)
-                txttgl_operan_elem.clear()
-                txttgl_operan_elem.send_keys(val_txttgl_operan)
-                time.sleep(0.5)
-                txttgl_operan_elem.send_keys(Keys.ESCAPE)
-                time.sleep(1.0) 
-                select_shift = Select(driver.find_element(By.ID, "selshift"))
-                select_shift.select_by_value(val_shift) 
-                time.sleep(1)  
-
-                if val_shift != 'I' :
-                    try:
-                        btn_save_cppt = WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.XPATH, "//button[@id='save' and @name='save' and @value='save']"))
-                        ) 
-                        driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", btn_save_cppt)
-                        time.sleep(0.5)  
-                        try:
-                            btn_save_cppt.click()
-                        except Exception:
-                            driver.execute_script("arguments[0].click();", btn_save_cppt) 
-                        time.sleep(2)
-                    except Exception as e_save:
-                        print(f"Error clicking save CPPT: {e_save}")
-             
+                time.sleep(1.5)  
                 current_url_cppt = driver.current_url
-                if "cppt" in current_url_cppt:
-                    impl_url = current_url_cppt.replace("cppt", "implementasi_keperawatan")
-                    driver.get(impl_url)
+                if "pemeriksaan_ttv" in current_url_cppt:
+                    cppt_url = current_url_cppt.replace("pemeriksaan_ttv", "cppt")
+                    driver.get(cppt_url)
 
-                    # Tunggu halaman selesai dimuat
                     WebDriverWait(driver, 15).until(
                         lambda d: d.execute_script("return document.readyState") == "complete"
                     )
-                    time.sleep(1.5) 
+                    time.sleep(1) 
                     try:
-                        collapse_tulis = WebDriverWait(driver, 10).until(
-                            EC.element_to_be_clickable((By.XPATH, "//div[@id='tulistransfer']//a[@data-card-widget='collapse']"))
+                        btn_copy_perawat = WebDriverWait(driver, 10).until(
+                            EC.element_to_be_clickable((By.XPATH, "(//tr[./td[2][contains(text(), 'Perawat')]])[1]//button[@name='btncopy']"))
                         )
-                        driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", collapse_tulis)
-                        time.sleep(0.5)
-                        try:
-                            collapse_tulis.click()
-                        except Exception:
-                            driver.execute_script("arguments[0].click();", collapse_tulis)
+                        btn_copy_perawat.click() 
+                        time.sleep(2)
+                    except Exception as e_cppt:
+                        print(f"Error: {e_cppt}")
+                
+                    now = datetime.now()
+                    current_date_str = now.strftime("%Y-%m-%d")
+                    tomorrow_date_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+                    jam = now.hour
+                
+                    if 6 < jam < 14:
+                        val_txttgl = f"{current_date_str} 13:00:00"
+                        val_txttgl_operan = f"{current_date_str} 14:00:00"
+                        val_shift = "I"  # Pagi
+                    elif 13 < jam < 21:
+                        val_txttgl = f"{current_date_str} 20:00:00"
+                        val_txttgl_operan = f"{current_date_str} 21:00:00"
+                        val_shift = "II"  # Siang
+                    else:
+                        if jam >= 21:
+                            val_txttgl = f"{tomorrow_date_str} 06:00:00"
+                            val_txttgl_operan = f"{tomorrow_date_str} 07:00:00"
+                        else:
+                            val_txttgl = f"{current_date_str} 06:00:00"
+                            val_txttgl_operan = f"{current_date_str} 07:00:00"
+                        val_shift = "III"  # Malam
+                
+                    txttgl_elem = WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.ID, "txttgl"))
+                    ) 
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", txttgl_elem)
+                    time.sleep(0.5) 
+                    try:
+                        txttgl_elem.click()
+                    except Exception:
+                        driver.execute_script("arguments[0].click();", txttgl_elem) 
+                    time.sleep(0.3)
+                    txttgl_elem.clear()
+                    txttgl_elem.send_keys(val_txttgl)
+                    time.sleep(0.5)
+                    txttgl_elem.send_keys(Keys.ESCAPE)
+                    time.sleep(1.0)
+                
+                    try:
                         time.sleep(1)
-                    except Exception as e_tulis:
-                        print(f"Error opening 'Tulis' card: {e_tulis}")
-            
+                        text_s = driver.execute_script("return CKEDITOR.instances.txtevaluasi_s.getData();") or ""
+                        text_s = re.sub(r'\b(pasien|px|klien|mengeluh|mengatakan)\b\s*', '', text_s, flags=re.IGNORECASE).strip()  
+                        driver.execute_script("CKEDITOR.instances.txtevaluasi_s.setData(arguments[0]);", text_s)
+                        print("Berhasil memperbarui txtevaluasi_s via CKEditor API.")
+                    except Exception as e_s:
+                        print(f"Gagal memproses txtevaluasi_s: {e_s}")
+                
+                    try:
+                        time.sleep(0.5)
+                        text_o = driver.execute_script("return CKEDITOR.instances.txtevaluasi_o.getData();") or "" 
+                        simple_pattern = r"Rr\s*:\s*.*?SpO2\s*:\s*\d+%\s*(?:dengan\s+O2(?:\s*\d+\s*(?:lpm|Lpm|L/min|L/mnt)?)?|tanpa\s+O2)?"
+                        text_bersih = re.sub(simple_pattern, "", text_o, flags=re.IGNORECASE | re.DOTALL) 
+                        if status_oks > 0:
+                            str_oksigen = f"dengan O2 {status_oks} lpm"
+                        else:
+                            str_oksigen = "tanpa O2" 
+                            new_vitals = f"Rr : {respirasi} x/menit\nSuhu : {suhu} °C\nNadi : {nadi} x/menit\nTD : {sistole}/{diastole} mmHg\nSpO2 : {spo2}% {str_oksigen}"
+                            final_text = text_bersih.strip() + "\n" + new_vitals 
+                            driver.execute_script("CKEDITOR.instances.txtevaluasi_o.setData(arguments[0]);", final_text)
+                    except Exception as e_o:
+                        print(f"Error: {e_o}")
+                
+                    try:
+                        time.sleep(0.5)
+                        text_a = (driver.execute_script("return CKEDITOR.instances.txtevaluasi_a.getData();") or "").lower() 
+                        mapping_a = {
+                            'bersihan': 'bersihan jalan napas tidak efektif',
+                            'diare': 'diare',
+                            'hipertermi': 'hipertermia',
+                            'hipervolemi': 'hipervolemia',
+                            'hipovolemi': 'hipovolemia',
+                            'integritas': 'gangguan integritas kulit dan jaringan',
+                            'ketidakstabilan': 'ketidakstabilan kadar glukosa darah',
+                            'nausea': 'nausea',
+                            'nyeri': 'nyeri akut',
+                            'curah jantung': 'penurunan curah jantung',
+                            'adaptif': 'penurunan kapasitas adaptif intrakranial',
+                            'pola': 'pola napas tidak efektif',
+                            'jatuh': 'resiko jatuh',
+                            'infeksi': 'resiko infeksi'
+                        } 
+                        matched_keys = []
+                        formatted_a_list = []
+                        for key, val in mapping_a.items():
+                            if key in text_a:
+                                matched_keys.append(key)
+                                formatted_a_list.append(val) 
+                        if formatted_a_list: 
+                            numbered_items = [f"{i+1}. {item}" for i, item in enumerate(formatted_a_list)]
+                            formatted_a_html = "<br>".join(numbered_items) 
+                            driver.execute_script("CKEDITOR.instances.txtevaluasi_a.setData(arguments[0]);", formatted_a_html)
+                    except Exception as e_a:
+                        print(f"Error on txtevaluasi_a: {e_a}")
+                
+                    p_dict = {
+                        'bersihan': ['Frekuensi napas membaik', 'Pola napas membaik', 'wheezing/ronchi menurun'],
+                        'diare': ['tidak ada tanda gejala hipovolemia', 'konsistensi feses membaik', 'kontrol pengeluaran feses meningkat', 'frekuensi defekasi membaik'],
+                        'hipertermi': ['Kulit tidak kemerahan', 'Suhu tubuh membaik'],
+                        'hipervolemi': ['Turgor kulit membaik', 'Keluaran urin meningkat', 'Edema menurun'],
+                        'hipovolemi': ['kekuatan nadi meningkat', 'perasaan lemah menurun', 'tekanan darah membaik', 'turgor kulit membaik'],
+                        'integritas': ['Perfusi perifer baik'],
+                        'ketidakstabilan': ['Kadar glukosa dalam darah membaik'],
+                        'nausea': ['Nafsu makan meningkat', 'keluhan mual menurun'],
+                        'nyeri': ['keluhan nyeri menurun', 'grimace menurun'],
+                        'curah jantung': ['status hemodinamik membaik'],
+                        'adaptif': ['Refleks neurologis membaik', 'Fungsi kognitif meningkat'],
+                        'pola': ['frekuensi napas membaik', 'dispneu menurun'],
+                        'jatuh': ['tidak ada kejadian jatuh'],
+                        'infeksi': ['tidak terjadi tanda tanda infeksi', 'kadar sel darah putih dalam batas normal']
+                    } 
+                    list_p = []
+                    for k in matched_keys:
+                        if k in p_dict:
+                            list_p.extend(p_dict[k]) 
+                    try:
+                        if list_p:
+                            numbered_items = [f"{i+1}. {item}" for i, item in enumerate(list_p)]
+                            list_p_html = "<br>".join(numbered_items) 
+                            driver.execute_script("CKEDITOR.instances.txtevaluasi_p.setData(arguments[0]);", list_p_html)
+                    except Exception as e_p:
+                        print(f"Error on txtevaluasi_p: {e_p}")
+                
+                    instruksi_dict = {
+                        'bersihan': [
+                            'Monitor pola napas',
+                            'Monitor adanya bunyi napas tambahan',
+                            'Monitor saturasi oksigen'
+                        ],
+                        'diare': [
+                            'Monitor intake dan output cairan',
+                            'Monitor tanda dan gejala hipovolemia',
+                            'Monitor jumlah pengeluaran diare'
+                        ],
+                        'integritas': [ 
+                            'Identifikasi penyebab gangguan integritas kulit'
+                        ],
+                        'hipertermi': [
+                            'Monitor Suhu tubuh',
+                            'Longgarkan atau lepaskan pakaian',
+                            'Lakukan pendinginan eksternal'
+                        ],
+                        'hipervolemi': [
+                            'Periksa tanda & gejala hipervolemia',
+                            'Monitor Status hemodinamik',
+                            'Monitor intake & output cairan',
+                            'Batasi asupan cairan dan garam'
+                        ],
+                        'hipovolemi': [
+                            'Periksa tanda dan gejala hipovolemia',
+                            'Monitor intake dan output cairan',
+                            'Kolaborasi pemberian cairan'
+                        ],
+                        'ketidakstabilan': [
+                            'Identifikasi tanda dan gejala hipoglikemi',
+                            'Monitor kadar glukosa darah, jika perlu'
+                        ],
+                        'nausea': [
+                            'Monitor keseimbangan cairan dan elektrolit',
+                            'Identifikasi isyarat nonverbal ketidaknyamanan',
+                            'Kontrol lingkungan penyebab muntah'
+                        ],
+                        'nyeri': [
+                            'Identifikasi lokasi, karakteristik, durasi, frekuensi, kualitas, intensitas nyeri',
+                            'Identifikasi skala nyeri',
+                            'Identifikasi respon nyeri non verbal',
+                            'Identifikasi factor yang memperberat dan memperingan nyeri'
+                        ],
+                        'curah jantung': [
+                            'Monitor status kardiopulmonal',
+                            'Monitor ststus oksigenasi'
+                        ],
+                        'adaptif': [
+                            'Monitor penurunan tingkat kesaadaran',
+                            'Monitor status neurologis'
+                        ],
+                        'pola': [
+                            'Monitor pola napas',
+                            'Palpasi kesimetrisan ekspansi paru',
+                            'Monitor saturasi oksigen'
+                        ],
+                        'jatuh': [
+                            'Identifikasi faktor risiko jatuh',
+                            'pastikan roda tempat tidur selalu dalam kondisi terkunci',
+                            'pasang handrail tempat tidur'
+                        ],
+                        'infeksi': [
+                            'Monitor tanda dan gejala infeksi local dan sistemik.'
+                        ]
+                    }
+                
+                    list_instruksi = []
+                    for k in matched_keys:
+                        if k in instruksi_dict:
+                            list_instruksi.extend(instruksi_dict[k]) 
+                    try:
+                        if list_instruksi:
+                            numbered_items = [f"{i+1}. {item}" for i, item in enumerate(list_instruksi)]
+                            list_instruksi_html = "<br>".join(numbered_items) 
+                            driver.execute_script("CKEDITOR.instances.txtinstruksi.setData(arguments[0]);", list_instruksi_html)
+                    except Exception as e_instruksi:
+                        print(f"Error on txtinstruksi: {e_instruksi}")
+                
+                    radio_seloperan = driver.find_element(By.XPATH, "//input[@id='seloperan' and @value='Ya']")
+                    if not radio_seloperan.is_selected():
+                        radio_seloperan.click()
+                
+                    txttgl_operan_elem = driver.find_element(By.ID, "txttgl_operan")
+                    txttgl_operan_elem.click()
+                    time.sleep(0.3)
+                    txttgl_operan_elem.clear()
+                    txttgl_operan_elem.send_keys(val_txttgl_operan)
+                    time.sleep(0.5)
+                    txttgl_operan_elem.send_keys(Keys.ESCAPE)
                     time.sleep(1.0) 
                     select_shift = Select(driver.find_element(By.ID, "selshift"))
                     select_shift.select_by_value(val_shift) 
-                    time.sleep(1)
-             
-                    diagnosis_checkbox_mapping = {
-                        'bersihan': '1.1',
-                        'diare': '3.2',
-                        'integritas': '13.1',
-                        'hipertermi': '13.2',
-                        'hipervolemi': '3.3',
-                        'hipovolemi': '3.4',
-                        'ketidakstabilan': '3.6',
-                        'nausea': '8.3',
-                        'nyeri': '8.4',
-                        'curah jantung': '2.2',
-                        'adaptif': '6.2',
-                        'pola': '1.5',
-                        'infeksi': '13.12',
-                        'jatuh': '13.13'
-                    }
-             
-                    for k in matched_keys:
-                        if k in diagnosis_checkbox_mapping:
-                            val_checkbox = diagnosis_checkbox_mapping[k]
-                            try:
-                                checkbox_elem = WebDriverWait(driver, 5).until(
-                                    EC.presence_of_element_located((By.XPATH, f"//input[@name='askep_diagnosis[]' and @value='{val_checkbox}']"))
-                                )
-                                driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", checkbox_elem)
-                                time.sleep(0.3)
-                                if not checkbox_elem.is_selected():
-                                    try:
-                                        checkbox_elem.click()
-                                    except Exception:
-                                        driver.execute_script("arguments[0].click();", checkbox_elem)
-                                    print(f"Checkbox untuk {k} (value={val_checkbox}) berhasil dicentang.")
-                            except Exception as e_cb:
-                                print(f"Gagal mencentang checkbox {k} (value={val_checkbox}): {e_cb}")
-            
-                    # 5. Mapping detail checkbox lanjutan berdasarkan diagnosis yang aktif (AJAX trigger)
-                    detail_checkbox_mapping = {
-                        'bersihan': [
-                            ("askep_penyebab[]", "1.1.2"), ("askep_penyebab[]", "1.1.8"),
-                            ("askep_gejala[]", "1.1.2.1"), ("askep_gejala[]", "1.1.2.11"),
-                            ("askep_kriteriahasil[]", "1.1.1"), ("askep_kriteriahasil[]", "1.1.11"), ("askep_kriteriahasil[]", "1.1.12"),
-                            ("askep_int_observasi[]", "1.1.1"), ("askep_int_observasi[]", "1.1.2"), ("askep_int_observasi[]", "1.1.8"),
-                            ("askep_int_kolaborasi[]", "1.1.1"),
-                            ("askep_imp_observasi[]", "1.1.1"), ("askep_imp_observasi[]", "1.1.11"), ("askep_imp_observasi[]", "1.1.2"), ("askep_imp_observasi[]", "1.1.8"),
-                            ("askep_imp_terapi[]", "1.1.1"), ("askep_int_terapi[]", "1.1.1"),
-                            ("askep_imp_kolaborasi[]", "1.1.1")
-                        ],
-                        'diare': [
-                            ("askep_penyebab[]", "3.2.1"), ("askep_penyebab[]", "3.2.3"),
-                            ("askep_gejala[]", "3.2.2.2"), ("askep_gejala[]", "3.2.2.4"),
-                            ("askep_kriteriahasil[]", "3.2.1"), ("askep_kriteriahasil[]", "3.2.8"), ("askep_kriteriahasil[]", "3.2.7"), ("askep_kriteriahasil[]", "3.2.9"),
-                            ("askep_int_observasi[]", "3.2.8"), ("askep_int_observasi[]", "3.2.6"), ("askep_int_observasi[]", "3.2.5"), ("askep_int_observasi[]", "3.2.4"), ("askep_int_observasi[]", "3.2.1"),
-                            ("askep_int_kolaborasi[]", "3.2.3"), ("askep_int_terapi[]", "3.2.3"),
-                            ("askep_imp_kolaborasi[]", "3.2.3"), ("askep_imp_terapi[]", "3.2.3"),
-                            ("askep_imp_observasi[]", "3.2.8"), ("askep_imp_observasi[]", "3.2.5"), ("askep_imp_observasi[]", "3.2.6"), ("askep_imp_observasi[]", "3.2.4"), ("askep_imp_observasi[]", "3.2.1")
-                        ],
-                        'integritas': [
-                            ("askep_imp_observasi[]", "13.1.1"), ("askep_int_observasi[]", "13.1.1"),
-                            ("askep_kriteriahasil[]", "13.1.4"), ("askep_kriteriahasil[]", "13.1.1"),
-                            ("askep_gejala[]", "13.1.1.3"), ("askep_penyebab[]", "13.1.2")
-                        ],
-                        'hipertermi': [
-                            ("askep_imp_kolaborasi[]", "13.2.1"), ("askep_imp_terapi[]", "13.2.6"),
-                            ("askep_imp_observasi[]", "13.2.2"), ("askep_imp_observasi[]", "13.2.1"),
-                            ("askep_int_kolaborasi[]", "13.2.1"), ("askep_int_terapi[]", "13.2.6"), ("askep_int_observasi[]", "13.2.2"),
-                            ("askep_kriteriahasil[]", "13.2.6"), ("askep_kriteriahasil[]", "13.2.1"),
-                            ("askep_gejala[]", "13.2.1.9"), ("askep_gejala[]", "13.2.1.3"),
-                            ("askep_penyebab[]", "13.2.5")
-                        ],
-                        'hipervolemi': [
-                            ("askep_imp_terapi[]", "3.3.2"),
-                            ("askep_imp_observasi[]", "3.3.3"), ("askep_imp_observasi[]", "3.3.4"), ("askep_imp_observasi[]", "3.3.1"),
-                            ("askep_int_terapi[]", "3.3.2"),
-                            ("askep_int_observasi[]", "3.3.4"), ("askep_int_observasi[]", "3.3.3"), ("askep_int_observasi[]", "3.3.1"),
-                            ("askep_kriteriahasil[]", "3.3.5"), ("askep_kriteriahasil[]", "3.3.2"), ("askep_kriteriahasil[]", "3.3.11"),
-                            ("askep_gejala[]", "3.3.2.2"), ("askep_penyebab[]", "3.3.1")
-                        ],
-                        'hipovolemi': [
-                            ("askep_imp_kolaborasi[]", "3.4.1"),
-                            ("askep_imp_observasi[]", "3.4.2"), ("askep_imp_observasi[]", "3.4.1"),
-                            ("askep_int_kolaborasi[]", "3.4.1"),
-                            ("askep_int_observasi[]", "3.4.2"), ("askep_int_observasi[]", "3.4.1"),
-                            ("askep_kriteriahasil[]", "3.4.2"), ("askep_kriteriahasil[]", "3.4.19"), ("askep_kriteriahasil[]", "3.4.1"),
-                            ("askep_gejala[]", "3.4.2.3"), ("askep_gejala[]", "3.4.1.2"),
-                            ("askep_penyebab[]", "3.4.4")
-                        ],
-                        'ketidakstabilan': [
-                            ("askep_imp_kolaborasi[]", "3.6.1"),
-                            ("askep_imp_observasi[]", "3.6.5"), ("askep_imp_observasi[]", "3.6.2"),
-                            ("askep_int_kolaborasi[]", "3.6.1"),
-                            ("askep_int_observasi[]", "3.6.5"), ("askep_int_observasi[]", "3.6.2"),
-                            ("askep_kriteriahasil[]", "3.6.12"),
-                            ("askep_gejala[]", "3.6.1.3"), ("askep_penyebab[]", "3.6.1")
-                        ],
-                        'nausea': [
-                            ("askep_imp_kolaborasi[]", "8.3.1"), ("askep_imp_terapi[]", "8.3.1"),
-                            ("askep_imp_observasi[]", "8.3.2"), ("askep_imp_observasi[]", "8.3.11"),
-                            ("askep_int_kolaborasi[]", "8.3.1"), ("askep_int_terapi[]", "8.3.1"), ("askep_int_observasi[]", "8.3.2"), ("askep_int_observasi[]", "8.3.11"),
-                            ("askep_kriteriahasil[]", "8.3.2"), ("askep_kriteriahasil[]", "8.3.1"),
-                            ("askep_gejala[]", "8.3.1.1"), ("askep_penyebab[]", "8.3.1")
-                        ],
-                        'nyeri': [
-                            ("askep_imp_kolaborasi[]", "8.4.1"), ("askep_imp_terapi[]", "8.4.3"),
-                            ("askep_imp_observasi[]", "8.4.3"), ("askep_imp_observasi[]", "8.4.1"),
-                            ("askep_int_kolaborasi[]", "8.4.1"), ("askep_int_terapi[]", "8.4.3"), ("askep_int_observasi[]", "8.4.3"), ("askep_int_observasi[]", "8.4.1"),
-                            ("askep_kriteriahasil[]", "8.4.2"),
-                            ("askep_gejala[]", "8.4.1.1"), ("askep_penyebab[]", "8.4.1")
-                        ],
-                        'curah jantung': [
-                            ("askep_imp_kolaborasi[]", "2.2.3"),
-                            ("askep_imp_observasi[]", "2.2.2"), ("askep_imp_observasi[]", "2.2.1"),
-                            ("askep_int_kolaborasi[]", "2.2.3"),
-                            ("askep_int_observasi[]", "2.2.2"), ("askep_int_observasi[]", "2.2.1"),
-                            ("askep_kriteriahasil[]", "2.2.3"), ("askep_kriteriahasil[]", "2.2.4"),
-                            ("askep_gejala[]", "2.2.1.9"), ("askep_penyebab[]", "2.2.2")
-                        ],
-                        'adaptif': [
-                            ("askep_imp_terapi[]", "6.2.10"), ("askep_imp_observasi[]", "6.2.2"),
-                            ("askep_int_terapi[]", "6.2.10"), ("askep_int_observasi[]", "6.2.2"),
-                            ("askep_kriteriahasil[]", "6.2.14"),
-                            ("askep_gejala[]", "6.2.2.6"), ("askep_penyebab[]", "6.2.3")
-                        ],
-                        'pola': [
-                            ("askep_imp_kolaborasi[]", "1.5.1"),
-                            ("askep_imp_observasi[]", "1.5.7"), ("askep_imp_observasi[]", "1.5.1"),
-                            ("askep_int_kolaborasi[]", "1.5.1"),
-                            ("askep_int_observasi[]", "1.5.8"), ("askep_int_observasi[]", "1.5.2"), ("askep_int_observasi[]", "1.5.1"),
-                            ("askep_kriteriahasil[]", "1.5.6"), ("askep_kriteriahasil[]", "1.5.11"), ("askep_kriteriahasil[]", "1.5.12"),
-                            ("askep_gejala[]", "1.5.2.3"), ("askep_gejala[]", "1.5.1.1"),
-                            ("askep_penyebab[]", "1.5.5"), ("askep_penyebab[]", "1.5.2")
-                        ],
-                        'infeksi': [
-                            ("askep_imp_terapi[]", "13.12.3"), ("askep_imp_observasi[]", "13.12.1"),
-                            ("askep_int_terapi[]", "13.12.3"), ("askep_int_observasi[]", "13.12.1"),
-                            ("askep_kriteriahasil[]", "13.12.5"),
-                            ("askep_penyebab[]", "13.12.7"), ("askep_penyebab[]", "13.12.2")
-                        ],
-                        'jatuh': [
-                            ("askep_imp_terapi[]", "13.13.3"), ("askep_imp_terapi[]", "13.13.2"),
-                            ("askep_imp_observasi[]", "13.13.3"), ("askep_imp_observasi[]", "13.13.1"),
-                            ("askep_int_terapi[]", "13.13.3"), ("askep_int_terapi[]", "13.13.2"),
-                            ("askep_int_observasi[]", "13.13.3"), ("askep_int_observasi[]", "13.13.1"),
-                            ("askep_penyebab[]", "13.13.2"), ("askep_penyebab[]", "13.13.12")
-                        ]
-                    }
-            
-                    # Beri jeda singkat untuk memastikan elemen AJAX termuat setelah diagnosis utama dicentang
-                    time.sleep(1.5)
-            
-                    # Loop pencentangan elemen detail berdasarkan matched_keys
-                    for k in matched_keys:
-                        if k in detail_checkbox_mapping:
-                            for name_attr, val_attr in detail_checkbox_mapping[k]:
-                                try:
-                                    detail_elem = WebDriverWait(driver, 3).until(
-                                        EC.presence_of_element_located((By.XPATH, f"//input[@name='{name_attr}' and @value='{val_attr}']"))
-                                    )
-                                    driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", detail_elem)
-                                    time.sleep(0.1)
-                                    if not detail_elem.is_selected():
-                                        try:
-                                            detail_elem.click()
-                                        except Exception:
-                                            driver.execute_script("arguments[0].click();", detail_elem)
-                                except Exception as e_detail:
-                                    # Mengabaikan jika elemen tidak muncul/belum ter-load karena jeda AJAX
-                                    pass
+                    time.sleep(1)  
 
-                    time.sleep(1) 
-            
-                    # 6. Menekan tombol Simpan (Save) setelah semua checkbox tercentang
-                    try:
-                        btn_save_impl = WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.XPATH, "//button[@id='save' and @name='save' and @value='save']"))
-                        )
-                        driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", btn_save_impl)
-                        time.sleep(0.5)
+                    if val_shift != 'I' :
                         try:
-                            btn_save_impl.click()
-                        except Exception:
-                            driver.execute_script("arguments[0].click();", btn_save_impl)
-                        print("Tombol Simpan implementasi keperawatan berhasil ditekan.")
-                        time.sleep(2)
-                    except Exception as e_save_impl:
-                        print(f"Gagal menekan tombol Simpan implementasi: {e_save_impl}")
+                            btn_save_cppt = WebDriverWait(driver, 10).until(
+                                EC.presence_of_element_located((By.XPATH, "//button[@id='save' and @name='save' and @value='save']"))
+                            ) 
+                            driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", btn_save_cppt)
+                            time.sleep(0.5)  
+                            try:
+                                btn_save_cppt.click()
+                            except Exception:
+                                driver.execute_script("arguments[0].click();", btn_save_cppt) 
+                            time.sleep(2)
+                        except Exception as e_save:
+                            print(f"Error clicking save CPPT: {e_save}")
                 
-            #  ==================================================
+                    current_url_cppt = driver.current_url
+                    if "cppt" in current_url_cppt:
+                        impl_url = current_url_cppt.replace("cppt", "implementasi_keperawatan")
+                        driver.get(impl_url)
 
-        print(f"Sukses memproses pasien di ruang: {nama_ruang}")
+                        # Tunggu halaman selesai dimuat
+                        WebDriverWait(driver, 15).until(
+                            lambda d: d.execute_script("return document.readyState") == "complete"
+                        )
+                        time.sleep(1.5) 
+                        try:
+                            collapse_tulis = WebDriverWait(driver, 10).until(
+                                EC.element_to_be_clickable((By.XPATH, "//div[@id='tulistransfer']//a[@data-card-widget='collapse']"))
+                            )
+                            driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", collapse_tulis)
+                            time.sleep(0.5)
+                            try:
+                                collapse_tulis.click()
+                            except Exception:
+                                driver.execute_script("arguments[0].click();", collapse_tulis)
+                            time.sleep(1)
+                        except Exception as e_tulis:
+                            print(f"Error opening 'Tulis' card: {e_tulis}")
+                
+                        time.sleep(1.0) 
+                        select_shift = Select(driver.find_element(By.ID, "selshift"))
+                        select_shift.select_by_value(val_shift) 
+                        time.sleep(1)
+                
+                        diagnosis_checkbox_mapping = {
+                            'bersihan': '1.1',
+                            'diare': '3.2',
+                            'integritas': '13.1',
+                            'hipertermi': '13.2',
+                            'hipervolemi': '3.3',
+                            'hipovolemi': '3.4',
+                            'ketidakstabilan': '3.6',
+                            'nausea': '8.3',
+                            'nyeri': '8.4',
+                            'curah jantung': '2.2',
+                            'adaptif': '6.2',
+                            'pola': '1.5',
+                            'infeksi': '13.12',
+                            'jatuh': '13.13'
+                        }
+                
+                        for k in matched_keys:
+                            if k in diagnosis_checkbox_mapping:
+                                val_checkbox = diagnosis_checkbox_mapping[k]
+                                try:
+                                    checkbox_elem = WebDriverWait(driver, 5).until(
+                                        EC.presence_of_element_located((By.XPATH, f"//input[@name='askep_diagnosis[]' and @value='{val_checkbox}']"))
+                                    )
+                                    driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", checkbox_elem)
+                                    time.sleep(0.3)
+                                    if not checkbox_elem.is_selected():
+                                        try:
+                                            checkbox_elem.click()
+                                        except Exception:
+                                            driver.execute_script("arguments[0].click();", checkbox_elem)
+                                        print(f"Checkbox untuk {k} (value={val_checkbox}) berhasil dicentang.")
+                                except Exception as e_cb:
+                                    print(f"Gagal mencentang checkbox {k} (value={val_checkbox}): {e_cb}")
+                
+                        # 5. Mapping detail checkbox lanjutan berdasarkan diagnosis yang aktif (AJAX trigger)
+                        detail_checkbox_mapping = {
+                            'bersihan': [
+                                ("askep_penyebab[]", "1.1.2"), ("askep_penyebab[]", "1.1.8"),
+                                ("askep_gejala[]", "1.1.2.1"), ("askep_gejala[]", "1.1.2.11"),
+                                ("askep_kriteriahasil[]", "1.1.1"), ("askep_kriteriahasil[]", "1.1.11"), ("askep_kriteriahasil[]", "1.1.12"),
+                                ("askep_int_observasi[]", "1.1.1"), ("askep_int_observasi[]", "1.1.2"), ("askep_int_observasi[]", "1.1.8"),
+                                ("askep_int_kolaborasi[]", "1.1.1"),
+                                ("askep_imp_observasi[]", "1.1.1"), ("askep_imp_observasi[]", "1.1.11"), ("askep_imp_observasi[]", "1.1.2"), ("askep_imp_observasi[]", "1.1.8"),
+                                ("askep_imp_terapi[]", "1.1.1"), ("askep_int_terapi[]", "1.1.1"),
+                                ("askep_imp_kolaborasi[]", "1.1.1")
+                            ],
+                            'diare': [
+                                ("askep_penyebab[]", "3.2.1"), ("askep_penyebab[]", "3.2.3"),
+                                ("askep_gejala[]", "3.2.2.2"), ("askep_gejala[]", "3.2.2.4"),
+                                ("askep_kriteriahasil[]", "3.2.1"), ("askep_kriteriahasil[]", "3.2.8"), ("askep_kriteriahasil[]", "3.2.7"), ("askep_kriteriahasil[]", "3.2.9"),
+                                ("askep_int_observasi[]", "3.2.8"), ("askep_int_observasi[]", "3.2.6"), ("askep_int_observasi[]", "3.2.5"), ("askep_int_observasi[]", "3.2.4"), ("askep_int_observasi[]", "3.2.1"),
+                                ("askep_int_kolaborasi[]", "3.2.3"), ("askep_int_terapi[]", "3.2.3"),
+                                ("askep_imp_kolaborasi[]", "3.2.3"), ("askep_imp_terapi[]", "3.2.3"),
+                                ("askep_imp_observasi[]", "3.2.8"), ("askep_imp_observasi[]", "3.2.5"), ("askep_imp_observasi[]", "3.2.6"), ("askep_imp_observasi[]", "3.2.4"), ("askep_imp_observasi[]", "3.2.1")
+                            ],
+                            'integritas': [
+                                ("askep_imp_observasi[]", "13.1.1"), ("askep_int_observasi[]", "13.1.1"),
+                                ("askep_kriteriahasil[]", "13.1.4"), ("askep_kriteriahasil[]", "13.1.1"),
+                                ("askep_gejala[]", "13.1.1.3"), ("askep_penyebab[]", "13.1.2")
+                            ],
+                            'hipertermi': [
+                                ("askep_imp_kolaborasi[]", "13.2.1"), ("askep_imp_terapi[]", "13.2.6"),
+                                ("askep_imp_observasi[]", "13.2.2"), ("askep_imp_observasi[]", "13.2.1"),
+                                ("askep_int_kolaborasi[]", "13.2.1"), ("askep_int_terapi[]", "13.2.6"), ("askep_int_observasi[]", "13.2.2"),
+                                ("askep_kriteriahasil[]", "13.2.6"), ("askep_kriteriahasil[]", "13.2.1"),
+                                ("askep_gejala[]", "13.2.1.9"), ("askep_gejala[]", "13.2.1.3"),
+                                ("askep_penyebab[]", "13.2.5")
+                            ],
+                            'hipervolemi': [
+                                ("askep_imp_terapi[]", "3.3.2"),
+                                ("askep_imp_observasi[]", "3.3.3"), ("askep_imp_observasi[]", "3.3.4"), ("askep_imp_observasi[]", "3.3.1"),
+                                ("askep_int_terapi[]", "3.3.2"),
+                                ("askep_int_observasi[]", "3.3.4"), ("askep_int_observasi[]", "3.3.3"), ("askep_int_observasi[]", "3.3.1"),
+                                ("askep_kriteriahasil[]", "3.3.5"), ("askep_kriteriahasil[]", "3.3.2"), ("askep_kriteriahasil[]", "3.3.11"),
+                                ("askep_gejala[]", "3.3.2.2"), ("askep_penyebab[]", "3.3.1")
+                            ],
+                            'hipovolemi': [
+                                ("askep_imp_kolaborasi[]", "3.4.1"),
+                                ("askep_imp_observasi[]", "3.4.2"), ("askep_imp_observasi[]", "3.4.1"),
+                                ("askep_int_kolaborasi[]", "3.4.1"),
+                                ("askep_int_observasi[]", "3.4.2"), ("askep_int_observasi[]", "3.4.1"),
+                                ("askep_kriteriahasil[]", "3.4.2"), ("askep_kriteriahasil[]", "3.4.19"), ("askep_kriteriahasil[]", "3.4.1"),
+                                ("askep_gejala[]", "3.4.2.3"), ("askep_gejala[]", "3.4.1.2"),
+                                ("askep_penyebab[]", "3.4.4")
+                            ],
+                            'ketidakstabilan': [
+                                ("askep_imp_kolaborasi[]", "3.6.1"),
+                                ("askep_imp_observasi[]", "3.6.5"), ("askep_imp_observasi[]", "3.6.2"),
+                                ("askep_int_kolaborasi[]", "3.6.1"),
+                                ("askep_int_observasi[]", "3.6.5"), ("askep_int_observasi[]", "3.6.2"),
+                                ("askep_kriteriahasil[]", "3.6.12"),
+                                ("askep_gejala[]", "3.6.1.3"), ("askep_penyebab[]", "3.6.1")
+                            ],
+                            'nausea': [
+                                ("askep_imp_kolaborasi[]", "8.3.1"), ("askep_imp_terapi[]", "8.3.1"),
+                                ("askep_imp_observasi[]", "8.3.2"), ("askep_imp_observasi[]", "8.3.11"),
+                                ("askep_int_kolaborasi[]", "8.3.1"), ("askep_int_terapi[]", "8.3.1"), ("askep_int_observasi[]", "8.3.2"), ("askep_int_observasi[]", "8.3.11"),
+                                ("askep_kriteriahasil[]", "8.3.2"), ("askep_kriteriahasil[]", "8.3.1"),
+                                ("askep_gejala[]", "8.3.1.1"), ("askep_penyebab[]", "8.3.1")
+                            ],
+                            'nyeri': [
+                                ("askep_imp_kolaborasi[]", "8.4.1"), ("askep_imp_terapi[]", "8.4.3"),
+                                ("askep_imp_observasi[]", "8.4.3"), ("askep_imp_observasi[]", "8.4.1"),
+                                ("askep_int_kolaborasi[]", "8.4.1"), ("askep_int_terapi[]", "8.4.3"), ("askep_int_observasi[]", "8.4.3"), ("askep_int_observasi[]", "8.4.1"),
+                                ("askep_kriteriahasil[]", "8.4.2"),
+                                ("askep_gejala[]", "8.4.1.1"), ("askep_penyebab[]", "8.4.1")
+                            ],
+                            'curah jantung': [
+                                ("askep_imp_kolaborasi[]", "2.2.3"),
+                                ("askep_imp_observasi[]", "2.2.2"), ("askep_imp_observasi[]", "2.2.1"),
+                                ("askep_int_kolaborasi[]", "2.2.3"),
+                                ("askep_int_observasi[]", "2.2.2"), ("askep_int_observasi[]", "2.2.1"),
+                                ("askep_kriteriahasil[]", "2.2.3"), ("askep_kriteriahasil[]", "2.2.4"),
+                                ("askep_gejala[]", "2.2.1.9"), ("askep_penyebab[]", "2.2.2")
+                            ],
+                            'adaptif': [
+                                ("askep_imp_terapi[]", "6.2.10"), ("askep_imp_observasi[]", "6.2.2"),
+                                ("askep_int_terapi[]", "6.2.10"), ("askep_int_observasi[]", "6.2.2"),
+                                ("askep_kriteriahasil[]", "6.2.14"),
+                                ("askep_gejala[]", "6.2.2.6"), ("askep_penyebab[]", "6.2.3")
+                            ],
+                            'pola': [
+                                ("askep_imp_kolaborasi[]", "1.5.1"),
+                                ("askep_imp_observasi[]", "1.5.7"), ("askep_imp_observasi[]", "1.5.1"),
+                                ("askep_int_kolaborasi[]", "1.5.1"),
+                                ("askep_int_observasi[]", "1.5.8"), ("askep_int_observasi[]", "1.5.2"), ("askep_int_observasi[]", "1.5.1"),
+                                ("askep_kriteriahasil[]", "1.5.6"), ("askep_kriteriahasil[]", "1.5.11"), ("askep_kriteriahasil[]", "1.5.12"),
+                                ("askep_gejala[]", "1.5.2.3"), ("askep_gejala[]", "1.5.1.1"),
+                                ("askep_penyebab[]", "1.5.5"), ("askep_penyebab[]", "1.5.2")
+                            ],
+                            'infeksi': [
+                                ("askep_imp_terapi[]", "13.12.3"), ("askep_imp_observasi[]", "13.12.1"),
+                                ("askep_int_terapi[]", "13.12.3"), ("askep_int_observasi[]", "13.12.1"),
+                                ("askep_kriteriahasil[]", "13.12.5"),
+                                ("askep_penyebab[]", "13.12.7"), ("askep_penyebab[]", "13.12.2")
+                            ],
+                            'jatuh': [
+                                ("askep_imp_terapi[]", "13.13.3"), ("askep_imp_terapi[]", "13.13.2"),
+                                ("askep_imp_observasi[]", "13.13.3"), ("askep_imp_observasi[]", "13.13.1"),
+                                ("askep_int_terapi[]", "13.13.3"), ("askep_int_terapi[]", "13.13.2"),
+                                ("askep_int_observasi[]", "13.13.3"), ("askep_int_observasi[]", "13.13.1"),
+                                ("askep_penyebab[]", "13.13.2"), ("askep_penyebab[]", "13.13.12")
+                            ]
+                        }
+                
+                        # Beri jeda singkat untuk memastikan elemen AJAX termuat setelah diagnosis utama dicentang
+                        time.sleep(1.5)
+                
+                        # Loop pencentangan elemen detail berdasarkan matched_keys
+                        for k in matched_keys:
+                            if k in detail_checkbox_mapping:
+                                for name_attr, val_attr in detail_checkbox_mapping[k]:
+                                    try:
+                                        detail_elem = WebDriverWait(driver, 3).until(
+                                            EC.presence_of_element_located((By.XPATH, f"//input[@name='{name_attr}' and @value='{val_attr}']"))
+                                        )
+                                        driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", detail_elem)
+                                        time.sleep(0.1)
+                                        if not detail_elem.is_selected():
+                                            try:
+                                                detail_elem.click()
+                                            except Exception:
+                                                driver.execute_script("arguments[0].click();", detail_elem)
+                                    except Exception as e_detail:
+                                        # Mengabaikan jika elemen tidak muncul/belum ter-load karena jeda AJAX
+                                        pass
+
+                        time.sleep(1) 
+                
+                        # 6. Menekan tombol Simpan (Save) setelah semua checkbox tercentang
+                        try:
+                            btn_save_impl = WebDriverWait(driver, 10).until(
+                                EC.presence_of_element_located((By.XPATH, "//button[@id='save' and @name='save' and @value='save']"))
+                            )
+                            driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", btn_save_impl)
+                            time.sleep(0.5)
+                            try:
+                                btn_save_impl.click()
+                            except Exception:
+                                driver.execute_script("arguments[0].click();", btn_save_impl)
+                            print("Tombol Simpan implementasi keperawatan berhasil ditekan.")
+                            time.sleep(2)
+                        except Exception as e_save_impl:
+                            print(f"Gagal menekan tombol Simpan implementasi: {e_save_impl}")
+                    
+                #  ==================================================
+
+            print(f"Sukses memproses pasien di ruang: {nama_ruang}")
 
     except Exception as e:
         print(f"Error pada ruang {nama_ruang}: {e}")
@@ -594,6 +688,8 @@ def jalankan_semua_automasi(data_teks):
         executor.map(proses_satu_pasien, baris_data) 
 
 def routine(): 
+    btn_mulai.config(state=tk.DISABLED)
+    root.update_idletasks()
     data_teks = input_vitalSign.get("1.0", END)
     t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks,))
     t.start()
@@ -603,9 +699,7 @@ def fetchRoomFromDatabase():
     root.update_idletasks()
         
     try:
-        today_str = datetime.now().strftime("%Y%m%d") 
-        url = f"{SUPABASE_URL}/rest/v1/logbook"
-
+        today_str = datetime.now().strftime("%Y%m%d")  
         headers = {
             "apikey": SUPABASE_KEY,
             "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -619,7 +713,7 @@ def fetchRoomFromDatabase():
             "order": "room.asc",
         }
         
-        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response = requests.get(SUPABASE_URL, headers=headers, params=params, timeout=10)
         
         if response.status_code == 200:
             data = response.json() 
@@ -643,9 +737,9 @@ def fetchRoomFromDatabase():
                     diastole = vital.get("diastole", "None")
                     nadi = vital.get("nadi", "None")
                     spo2 = vital.get("spo2", "None")
-                    status_oksigen = vital.get("status_oksigen", "0")
+                    status_oksigen = vital.get("status_oks", "0")
                     suhu = vital.get("suhu", "None")
-                    rr = vital.get("rr", "None")
+                    rr = vital.get("respirasi", "None")
                     kesadaran = vital.get("kesadaran", "1")
                     
                     # Gabungkan kembali dengan pemisah tanda hubung '-'
