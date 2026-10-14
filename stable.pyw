@@ -23,7 +23,69 @@ HEADERS = {
     "Content-Type": "application/json",
     "Prefer": "return=minimal"
 }
-def proses_satu_pasien(data_pasien): 
+def proses_satu_pasien(data_pasien):  
+    try:
+        btn_mulai.config(state="disabled")
+        root.update_idletasks()
+
+        input_text = input_vitalSign.get("1.0", tk.END).strip()
+        if not input_text:
+            messagebox.showwarning("warning", "textarea is empty")
+            btn_mulai.config(state="normal")
+            return
+     
+        defaults = [None, None, None, None, '97', '0', '36', '20', '1']
+        processed_lines = [] 
+            
+        for line in input_text.splitlines():
+            if not line.strip(): 
+                continue 
+            parts = line.split('-')
+            complete_parts = [parts[i].strip() if i < len(parts) and parts[i].strip() != '' and parts[i].strip() != 'None' else defaults[i] for i in range(9)]
+            processed_lines.append("-".join(str(p) for p in complete_parts)) 
+                 
+        final_output = "\n".join(processed_lines)
+        input_vitalSign.delete("1.0", tk.END) 
+        input_vitalSign.insert("1.0", final_output)
+    
+        today_str = datetime.now().strftime("%Y%m%d") 
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+        }
+    
+        success_count = 0
+        for line in processed_lines.splitlines() if isinstance(processed_lines, str) else processed_lines:
+            parts = line.split('-')
+            room_name = parts[0]
+            if not room_name:
+                continue
+    
+            vital_data = {
+                "sistole": parts[1] if parts[1] != 'None' else None,
+                "diastole": parts[2] if parts[2] != 'None' else None,
+                "nadi": parts[3] if parts[3] != 'None' else None,
+                "spo2": parts[4] if parts[4] != 'None' else None,
+                "status_oks": parts[5],
+                "suhu": parts[6] if parts[6] != 'None' else None,
+                "respirasi": parts[7] if parts[7] != 'None' else None,
+                "kesadaran": parts[8]
+            }
+            payload = {
+                "vital_signs": vital_data
+            }
+            patch_url = f"{SUPABASE_URL}?room=eq.{room_name}&created_at=eq.{today_str}"
+            response = requests.patch(patch_url, headers=headers, json=payload, timeout=10)
+                
+            if response.status_code in [200, 204]:
+                success_count += 1
+    
+        messagebox.showinfo("Berhasil", f"Berhasil memformat dan menyimpan {success_count} data ke Supabase!")
+    
+    except Exception as e:
+        messagebox.showerror("Error", f"Terjadi kesalahan: {e}") 
+
     pecah = data_pasien.split('-')
     if len(pecah) < 8:
         print(f"Format salah untuk data: {data_pasien}")
@@ -81,22 +143,23 @@ def proses_satu_pasien(data_pasien):
         no_rm = "-"
         nama_pasien = "-"
         diagnosa_medis = "-"
-        
+
+        # Get patient information from handover page 
         if "asperawat_ranap" in current_url: 
             handoverURL = current_url.replace("asperawat_ranap", "handover_dewasa1")  
-            driver.get(handoverURL) 
-
+            driver.get(handoverURL)  
             try:
                 no_rm_elem = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'No RM')]/following-sibling::div"))
                 )
-                no_rm = no_rm_elem.text.replace(":", "").strip()
-        
-                nama_pasien_elem = driver.find_element(By.XPATH, "//div[contains(text(), 'Nama Pasien')]/following-sibling::div//strong")
-                nama_pasien = nama_pasien_elem.text.strip()
+                no_rm = no_rm_elem.text.replace(":", "").strip()  
+                nama_pasien_elem = driver.find_element(By.XPATH, "//div[contains(text(), 'Nama Pasien')]/following-sibling::div//strong") 
+                nama_pasien_raw = nama_pasien_elem.text.strip() 
+                parts = nama_pasien_raw.split(" ")
+                nama_pasien = parts[1] if len(parts) > 1 else nama_pasien_raw 
             except Exception as e:
-                print(f"[WARNING] Gagal mengambil identitas pasien untuk ruang {nama_ruang}: {e}")
-        
+                print(f"[WARNING] Gagal mengambil identitas pasien untuk ruang {nama_ruang}: {e}") 
+
             try:
                 first_row = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, "//table[@id='datalist']/tbody/tr[1]"))
@@ -109,34 +172,22 @@ def proses_satu_pasien(data_pasien):
                         break
             except Exception as e:
                 print(f"[WARNING] Gagal mengambil diagnosa untuk ruang {nama_ruang}: {e}")
-         
-            print("\n" + "="*50)
-            print(f" DATA BERHASIL DIUTIP (Ruang: {nama_ruang})")
-            print("="*50)
-            print(f" Nama Pasien    : {nama_pasien}")
-            print(f" No RM          : {no_rm}")
-            print(f" Diagnosa Medis : {diagnosa_medis}")
-            print("="*50 + "\n")
-         
-            # --- PUSH ATAU UPDATE DATA KE SUPABASE (Format Tanggal: YYYYMMDD) ---
-            tanggal_hari_ini = datetime.now().strftime("%Y%m%d")
-        
+           
+            tanggal_hari_ini = datetime.now().strftime("%Y%m%d") 
             payload = {
                 "room": nama_ruang,
                 "patient_name": nama_pasien,
                 "no_rm": no_rm,
                 "diagnosa_medis": diagnosa_medis,
                 "created_at": tanggal_hari_ini
-            }
-        
+            } 
             try:
                 # Cek apakah sudah ada data untuk room ini dengan tanggal yang sama
                 cek_url = f"{SUPABASE_URL}?room=eq.{nama_ruang}&created_at=eq.{tanggal_hari_ini}"
                 resp_cek = requests.get(cek_url, headers=HEADERS)
                 existing_data = resp_cek.json()
         
-                if existing_data and len(existing_data) > 0:
-                    # Jika sudah ada di hari yang sama, update (PATCH) baris tersebut agar tidak double
+                if existing_data and len(existing_data) > 0: 
                     row_id = existing_data[0]['id']
                     patch_url = f"{SUPABASE_URL}?id=eq.{row_id}"
                     response = requests.patch(patch_url, json=payload, headers=HEADERS)
@@ -145,28 +196,24 @@ def proses_satu_pasien(data_pasien):
                         print(f"-> [UPDATE SUKSES] Data pasien {nama_pasien} (Ruang: {nama_ruang}) diperbarui.")
                     else:
                         print(f"-> [GAGAL UPDATE] Status: {response.status_code}, Respon: {response.text}")
-                else:
-                    # Jika belum ada, buat baru (POST)
+                else: 
                     response = requests.post(SUPABASE_URL, json=payload, headers=HEADERS)
                     if response.status_code in [200, 201]:
                         print(f"-> [INSERT SUKSES] Data pasien {nama_pasien} (Ruang: {nama_ruang}) ditambahkan.")
                     else:
-                        print(f"-> [GAGAL INSERT] Status: {response.status_code}, Respon: {response.text}")
-        
+                        print(f"-> [GAGAL INSERT] Status: {response.status_code}, Respon: {response.text}") 
             except Exception as req_err:
                 print(f"-> [ERROR] Kesalahan koneksi Supabase: {req_err}")
- 
+
             current_url = driver.current_url 
             if "handover_dewasa1" in current_url:
                 vitalSign_URL = current_url.replace("handover_dewasa1", "pemeriksaan_ttv")  
-                driver.get(vitalSign_URL) 
-                
+                driver.get(vitalSign_URL)  
                 collapse_btn = WebDriverWait(driver, 15).until(
                     EC.element_to_be_clickable((By.XPATH, "//h3/a[@data-card-widget='collapse' and contains(text(), 'Tulis Data')]"))
                 )
                 collapse_btn.click()
-                time.sleep(1)  
-                
+                time.sleep(1)
                 driver.find_element(By.ID, "txtresp").clear()
                 driver.find_element(By.ID, "txtresp").send_keys(respirasi) 
                 driver.find_element(By.ID, "txtspo2").clear()
@@ -191,10 +238,7 @@ def proses_satu_pasien(data_pasien):
                 btn_save = WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable((By.ID, "save"))
                 )
-                btn_save.click() 
-
-
-
+                btn_save.click()  
                 WebDriverWait(driver, 15).until(
                     lambda d: d.execute_script("return document.readyState") == "complete"
                 )
@@ -202,8 +246,7 @@ def proses_satu_pasien(data_pasien):
                 current_url_cppt = driver.current_url
                 if "pemeriksaan_ttv" in current_url_cppt:
                     cppt_url = current_url_cppt.replace("pemeriksaan_ttv", "cppt")
-                    driver.get(cppt_url)
-
+                    driver.get(cppt_url) 
                     WebDriverWait(driver, 15).until(
                         lambda d: d.execute_script("return document.readyState") == "complete"
                     )
@@ -453,9 +496,7 @@ def proses_satu_pasien(data_pasien):
                     current_url_cppt = driver.current_url
                     if "cppt" in current_url_cppt:
                         impl_url = current_url_cppt.replace("cppt", "implementasi_keperawatan")
-                        driver.get(impl_url)
-
-                        # Tunggu halaman selesai dimuat
+                        driver.get(impl_url) 
                         WebDriverWait(driver, 15).until(
                             lambda d: d.execute_script("return document.readyState") == "complete"
                         )
@@ -624,8 +665,6 @@ def proses_satu_pasien(data_pasien):
                                 ("askep_penyebab[]", "13.13.2"), ("askep_penyebab[]", "13.13.12")
                             ]
                         }
-                
-                        # Beri jeda singkat untuk memastikan elemen AJAX termuat setelah diagnosis utama dicentang
                         time.sleep(1.5)
                 
                         # Loop pencentangan elemen detail berdasarkan matched_keys
@@ -645,10 +684,8 @@ def proses_satu_pasien(data_pasien):
                                                 driver.execute_script("arguments[0].click();", detail_elem)
                                     except Exception as e_detail:
                                         # Mengabaikan jika elemen tidak muncul/belum ter-load karena jeda AJAX
-                                        pass
-
-                        time.sleep(1) 
-                
+                                        pass 
+                        time.sleep(1)  
                         # 6. Menekan tombol Simpan (Save) setelah semua checkbox tercentang
                         try:
                             btn_save_impl = WebDriverWait(driver, 10).until(
@@ -663,21 +700,16 @@ def proses_satu_pasien(data_pasien):
                             print("Tombol Simpan implementasi keperawatan berhasil ditekan.")
                             time.sleep(2)
                         except Exception as e_save_impl:
-                            print(f"Gagal menekan tombol Simpan implementasi: {e_save_impl}")
-                    
-                #  ==================================================
-
+                            print(f"Gagal menekan tombol Simpan implementasi: {e_save_impl}") 
             print(f"Sukses memproses pasien di ruang: {nama_ruang}")
 
     except Exception as e:
         print(f"Error pada ruang {nama_ruang}: {e}")
-    finally:
-        # Opsional: Tutup driver otomatis setelah selesai agar tidak menumpuk
-        # driver.quit()
-        pass
+    finally: 
+        driver.quit()
+        btn_mulai.config(state="normal") 
 
-def jalankan_semua_automasi(data_teks):
-    # Menjalankan banyak baris data secara simultan menggunakan ThreadPool
+def jalankan_semua_automasi(data_teks): 
     baris_data = [b.strip() for b in data_teks.strip().split('\n') if b.strip()]
     if not baris_data:
         messagebox.showerror("Error", "Data pasien masih kosong!")
@@ -704,17 +736,13 @@ def fetchRoomFromDatabase():
             "apikey": SUPABASE_KEY,
             "Authorization": f"Bearer {SUPABASE_KEY}",
             "Content-Type": "application/json",
-        } 
-        
-        # Kita minta kolom 'room' DAN 'vital_signs' dari Supabase
+        }  
         params = {
             "select": "room,vital_signs",
             "created_at": f"eq.{today_str}",
             "order": "room.asc",
-        }
-        
-        response = requests.get(SUPABASE_URL, headers=headers, params=params, timeout=10)
-        
+        } 
+        response = requests.get(SUPABASE_URL, headers=headers, params=params, timeout=10) 
         if response.status_code == 200:
             data = response.json() 
             input_vitalSign.delete("1.0", tk.END)
@@ -765,92 +793,13 @@ def fetchRoomFromDatabase():
         
     finally:
         btn_fetch.config(state='normal')
-  
-def save_formatted_to_database():
-    btn_save.config(state="disabled")
-    root.update_idletasks()
-
-    try:
-        input_text = input_vitalSign.get("1.0", tk.END).strip()
-        if not input_text:
-            messagebox.showwarning("Peringatan", "Tidak ada data untuk disimpan!")
-            btn_save.config(state="normal")
-            return
-
-        # --- LANGKAH 1: Jalankan proses formatting terlebih dahulu ---
-        defaults = [None, None, None, None, '97', '0', '36', '20', '1']
-        processed_lines = [] 
-        
-        for line in input_text.splitlines():
-            if not line.strip(): 
-                continue 
-            parts = line.split('-')
-            # Lengkapi bagian yang kurang dengan defaults
-            complete_parts = [parts[i].strip() if i < len(parts) and parts[i].strip() != '' and parts[i].strip() != 'None' else defaults[i] for i in range(9)]
-            processed_lines.append("-".join(str(p) for p in complete_parts)) 
-            
-        # Tampilkan kembali hasil format yang rapi ke widget Text
-        final_output = "\n".join(processed_lines)
-        input_vitalSign.delete("1.0", tk.END) 
-        input_vitalSign.insert("1.0", final_output)
-
-        # --- LANGKAH 2: Kirim data yang sudah diformat ke Supabase ---
-        today_str = datetime.now().strftime("%Y%m%d")
-        url = f"{SUPABASE_URL}/rest/v1/logbook"
-        headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-        }
-
-        success_count = 0
-        for line in processed_lines.splitlines() if isinstance(processed_lines, str) else processed_lines:
-            # Pecah kembali string yang sudah rapi
-            parts = line.split('-')
-            room_name = parts[0]
-            
-            if not room_name:
-                continue
-
-            # Bungkus ke JSONB vital_signs
-            vital_data = {
-                "sistole": parts[1] if parts[1] != 'None' else None,
-                "diastole": parts[2] if parts[2] != 'None' else None,
-                "nadi": parts[3] if parts[3] != 'None' else None,
-                "spo2": parts[4] if parts[4] != 'None' else None,
-                "status_oksigen": parts[5],
-                "suhu": parts[6] if parts[6] != 'None' else None,
-                "rr": parts[7] if parts[7] != 'None' else None,
-                "kesadaran": parts[8]
-            }
-
-            payload = {
-                "vital_signs": vital_data
-            }
-
-            # Update ke Supabase berdasarkan room & created_at
-            patch_url = f"{url}?room=eq.{room_name}&created_at=eq.{today_str}"
-            response = requests.patch(patch_url, headers=headers, json=payload, timeout=10)
-            
-            if response.status_code in [200, 204]:
-                success_count += 1
-
-        messagebox.showinfo("Berhasil", f"Berhasil memformat dan menyimpan {success_count} data ke Supabase!")
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Terjadi kesalahan: {e}")
-    finally:
-        btn_save.config(state="normal")
-  
-
+   
 root = Tk()  
 input_vitalSign = Text(root, height=10, width=50)
 input_vitalSign.pack(padx=2, pady=2) 
 
 btn_fetch = Button(root, text="fetch", command=fetchRoomFromDatabase)
-btn_fetch.pack(side=tk.LEFT, padx='1')   
-btn_save = Button(root, text="Sync", command=save_formatted_to_database)
-btn_save.pack(side=tk.LEFT, padx='1')
+btn_fetch.pack(side=tk.LEFT, padx='1')    
 btn_mulai = Button(root, text="routine", command=routine)
 btn_mulai.pack(side=tk.LEFT, padx='1') 
 root.mainloop()
