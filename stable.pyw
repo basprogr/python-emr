@@ -23,69 +23,7 @@ HEADERS = {
     "Content-Type": "application/json",
     "Prefer": "return=minimal"
 }
-def proses_satu_pasien(data_pasien):  
-    try:
-        btn_mulai.config(state="disabled")
-        root.update_idletasks()
-
-        input_text = input_vitalSign.get("1.0", tk.END).strip()
-        if not input_text:
-            messagebox.showwarning("warning", "textarea is empty")
-            btn_mulai.config(state="normal")
-            return
-     
-        defaults = [None, None, None, None, '97', '0', '36', '20', '1']
-        processed_lines = [] 
-            
-        for line in input_text.splitlines():
-            if not line.strip(): 
-                continue 
-            parts = line.split('-')
-            complete_parts = [parts[i].strip() if i < len(parts) and parts[i].strip() != '' and parts[i].strip() != 'None' else defaults[i] for i in range(9)]
-            processed_lines.append("-".join(str(p) for p in complete_parts)) 
-                 
-        final_output = "\n".join(processed_lines)
-        input_vitalSign.delete("1.0", tk.END) 
-        input_vitalSign.insert("1.0", final_output)
-    
-        today_str = datetime.now().strftime("%Y%m%d") 
-        headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-        }
-    
-        success_count = 0
-        for line in processed_lines.splitlines() if isinstance(processed_lines, str) else processed_lines:
-            parts = line.split('-')
-            room_name = parts[0]
-            if not room_name:
-                continue
-    
-            vital_data = {
-                "sistole": parts[1] if parts[1] != 'None' else None,
-                "diastole": parts[2] if parts[2] != 'None' else None,
-                "nadi": parts[3] if parts[3] != 'None' else None,
-                "spo2": parts[4] if parts[4] != 'None' else None,
-                "status_oks": parts[5],
-                "suhu": parts[6] if parts[6] != 'None' else None,
-                "respirasi": parts[7] if parts[7] != 'None' else None,
-                "kesadaran": parts[8]
-            }
-            payload = {
-                "vital_signs": vital_data
-            }
-            patch_url = f"{SUPABASE_URL}?room=eq.{room_name}&created_at=eq.{today_str}"
-            response = requests.patch(patch_url, headers=headers, json=payload, timeout=10)
-                
-            if response.status_code in [200, 204]:
-                success_count += 1
-    
-        messagebox.showinfo("Berhasil", f"Berhasil memformat dan menyimpan {success_count} data ke Supabase!")
-    
-    except Exception as e:
-        messagebox.showerror("Error", f"Terjadi kesalahan: {e}") 
-
+def proses_satu_pasien(data_pasien):   
     pecah = data_pasien.split('-')
     if len(pecah) < 8:
         print(f"Format salah untuk data: {data_pasien}")
@@ -719,9 +657,69 @@ def jalankan_semua_automasi(data_teks):
     with ThreadPoolExecutor(max_workers=maxWindow) as executor:
         executor.map(proses_satu_pasien, baris_data) 
 
-def routine(): 
-    btn_mulai.config(state=tk.DISABLED)
-    root.update_idletasks()
+def routine():  
+    try:
+        btn_mulai.config(state="disabled")
+        root.update_idletasks()
+    
+        input_text = input_vitalSign.get("1.0", tk.END).strip()
+        if not input_text:
+            messagebox.showwarning("warning", "textarea is empty")
+            btn_mulai.config(state="normal")
+            return
+         
+        defaults = [None, None, None, None, '97', '0', '36', '20', '1']
+        processed_lines = [] 
+
+        for line in input_text.splitlines():
+            if not line.strip(): 
+                continue 
+            parts = line.split('-')
+            complete_parts = [parts[i].strip() if i < len(parts) and parts[i].strip() != '' and parts[i].strip() != 'None' else defaults[i] for i in range(9)]
+            processed_lines.append("-".join(str(p) for p in complete_parts)) 
+
+        final_output = "\n".join(processed_lines)
+        input_vitalSign.delete("1.0", tk.END) 
+        input_vitalSign.insert("1.0", final_output)
+        
+        today_str = datetime.now().strftime("%Y%m%d") 
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+        }
+        
+        success_count = 0
+        for line in processed_lines.splitlines() if isinstance(processed_lines, str) else processed_lines:
+            parts = line.split('-')
+            room_name = parts[0]
+            if not room_name:
+                continue
+        
+            vital_data = {
+                "sistole": parts[1] if parts[1] != 'None' else None,
+                "diastole": parts[2] if parts[2] != 'None' else None,
+                "nadi": parts[3] if parts[3] != 'None' else None,
+                "spo2": parts[4] if parts[4] != 'None' else None,
+                "status_oks": parts[5],
+                "suhu": parts[6] if parts[6] != 'None' else None,
+                "respirasi": parts[7] if parts[7] != 'None' else None,
+                "kesadaran": parts[8]
+            }
+            payload = {
+                "vital_signs": vital_data
+            }
+            patch_url = f"{SUPABASE_URL}?room=eq.{room_name}&created_at=eq.{today_str}"
+            response = requests.patch(patch_url, headers=headers, json=payload, timeout=10)
+
+            if response.status_code in [200, 204]:
+                success_count += 1
+        
+        messagebox.showinfo("Berhasil", f"Berhasil memformat dan menyimpan {success_count} data ke Supabase!")
+        
+    except Exception as e:
+        messagebox.showerror("Error", f"Terjadi kesalahan: {e}") 
+
     data_teks = input_vitalSign.get("1.0", END)
     t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks,))
     t.start()
@@ -756,11 +754,8 @@ def fetchRoomFromDatabase():
             formatted_lines = []
             for item in data:
                 room_name = item.get("room", "")
-                vital = item.get("vital_signs")
-                
-                # Jika vital_signs sudah ada isinya (tersimpan di DB)
-                if vital:
-                    # Ambil sesuai urutan defaults: sistole, diastole, nadi, spo2, status_oksigen, suhu, rr, kesadaran
+                vital = item.get("vital_signs") 
+                if vital: 
                     sistole = vital.get("sistole", "None")
                     diastole = vital.get("diastole", "None")
                     nadi = vital.get("nadi", "None")
@@ -769,28 +764,19 @@ def fetchRoomFromDatabase():
                     suhu = vital.get("suhu", "None")
                     rr = vital.get("respirasi", "None")
                     kesadaran = vital.get("kesadaran", "1")
-                    
-                    # Gabungkan kembali dengan pemisah tanda hubung '-'
+                     
                     line = f"{room_name}-{sistole}-{diastole}-{nadi}-{spo2}-{status_oksigen}-{suhu}-{rr}-{kesadaran}"
-                else:
-                    # Kalau belum ada vital signs, tampilkan nama ruangnya saja
-                    line = room_name
-                    
-                formatted_lines.append(line)
-                
+                else: 
+                    line = room_name 
+                formatted_lines.append(line) 
             final_output = "\n".join(formatted_lines)
-            input_vitalSign.insert(tk.END, final_output)
-            
+            input_vitalSign.insert(tk.END, final_output) 
         else:
             input_vitalSign.delete("1.0", tk.END)
-            input_vitalSign.insert(
-                tk.END, f"Gagal mengambil data! (Error Code: {response.status_code})"
-            )
-            
+            input_vitalSign.insert(tk.END, f"Gagal mengambil data! (Error Code: {response.status_code})" ) 
     except Exception as e:
         input_vitalSign.delete("1.0", tk.END)
-        input_vitalSign.insert(tk.END, f"Error Koneksi: {e}")
-        
+        input_vitalSign.insert(tk.END, f"Error Koneksi: {e}") 
     finally:
         btn_fetch.config(state='normal')
    
