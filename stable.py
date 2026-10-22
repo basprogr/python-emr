@@ -90,13 +90,17 @@ def proses_satu_pasien(data_pasien):
                 no_rm_elem = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'No RM')]/following-sibling::div"))
                 )
-                no_rm = no_rm_elem.text.replace(":", "").strip()  
+                no_rm = no_rm_elem.text.replace(":", "").strip()   
                 nama_pasien_elem = driver.find_element(By.XPATH, "//div[contains(text(), 'Nama Pasien')]/following-sibling::div//strong") 
-                nama_pasien_raw = nama_pasien_elem.text.strip() 
-                parts = nama_pasien_raw.split(" ")
-                nama_pasien = parts[1] if len(parts) > 1 else nama_pasien_raw 
+                nama_pasien_raw = nama_pasien_elem.text.strip()  
+                parts = nama_pasien_raw.split(" ") 
+                if len(parts) > 1:
+                    nama_pasien = " ".join(parts[1:])
+                else:
+                    nama_pasien = nama_pasien_raw  
+                print(f"No RM: {no_rm}, Nama: {nama_pasien}") 
             except Exception as e:
-                print(f"[WARNING] Gagal mengambil identitas pasien untuk ruang {nama_ruang}: {e}") 
+                print(f"[WARNING] Gagal mengambil identitas pasien: {e}")
 
             try:
                 first_row = WebDriverWait(driver, 10).until(
