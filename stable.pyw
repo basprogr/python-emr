@@ -1,13 +1,11 @@
 import re
 import requests
-import time
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from tkinter import *
-import tkinter as tk  
-from tkinter import ttk
-from tkinter import messagebox
+from tkinter import ttk, messagebox 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -764,7 +762,7 @@ def routine():
         btn_mulai.config(state="disabled")
         root.update_idletasks()
     
-        input_text = input_vitalSign.get("1.0", tk.END).strip()
+        input_text = input_vitalSign.get("1.0", END).strip()
         if not input_text:
             messagebox.showwarning("Warning", "Textarea masih kosong!")
             btn_mulai.config(state="normal")
@@ -781,7 +779,7 @@ def routine():
             processed_lines.append("-".join(str(p) for p in complete_parts)) 
 
         final_output = "\n".join(processed_lines)
-        input_vitalSign.delete("1.0", tk.END) 
+        input_vitalSign.delete("1.0", END) 
         input_vitalSign.insert("1.0", final_output)
         
         today_str = datetime.now().strftime("%Y%m%d") 
@@ -823,12 +821,12 @@ def routine():
         messagebox.showerror("Error", f"Terjadi kesalahan: {e}") 
         btn_mulai.config(state="normal") # Kembalikan tombol aktif jika error
  
-    data_teks_baru = input_vitalSign.get("1.0", tk.END)
+    data_teks_baru = input_vitalSign.get("1.0", END)
     t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks_baru, kredensial_terpilih, selected_nama))
     t.start()
    
 def fetchRoomFromDatabase():     
-    btn_fetch.config(state=tk.DISABLED)
+    btn_fetch.config(state=DISABLED)
     root.update_idletasks()
         
     try:
@@ -846,11 +844,11 @@ def fetchRoomFromDatabase():
         response = requests.get(SUPABASE_URL, headers=headers, params=params, timeout=10) 
         if response.status_code == 200:
             data = response.json() 
-            input_vitalSign.delete("1.0", tk.END)
+            input_vitalSign.delete("1.0", END)
             
             if not data:
                 input_vitalSign.insert(
-                    tk.END, f"Belum ada data ruangan untuk hari ini ({today_str})"
+                    END, f"Belum ada data ruangan untuk hari ini ({today_str})"
                 )
                 return  
             
@@ -873,28 +871,49 @@ def fetchRoomFromDatabase():
                     line = room_name 
                 formatted_lines.append(line) 
             final_output = "\n".join(formatted_lines)
-            input_vitalSign.insert(tk.END, final_output) 
+            input_vitalSign.insert(END, final_output) 
         else:
-            input_vitalSign.delete("1.0", tk.END)
-            input_vitalSign.insert(tk.END, f"Gagal mengambil data! (Error Code: {response.status_code})" ) 
+            input_vitalSign.delete("1.0", END)
+            input_vitalSign.insert(END, f"Gagal mengambil data! (Error Code: {response.status_code})" ) 
     except Exception as e:
-        input_vitalSign.delete("1.0", tk.END)
-        input_vitalSign.insert(tk.END, f"Error Koneksi: {e}") 
+        input_vitalSign.delete("1.0", END)
+        input_vitalSign.insert(END, f"Error Koneksi: {e}") 
     finally:
         btn_fetch.config(state='normal')
-   
-root = Tk() 
-root.title("Aplikasi Vital Sign & Automasi") 
-lbl_akun = Label(root, text="PJ")
-lbl_akun.pack(anchor=tk.W, padx=5) 
-combo_akun = ttk.Combobox(root, values=list(DAFTAR_AKUN.keys()), state="readonly", width=47)
-combo_akun.pack(padx=2, pady=2)  
-input_vitalSign = Text(root, height=10, width=50)
-input_vitalSign.pack(padx=2, pady=2)  
-frame_btn = Frame(root)
-frame_btn.pack(pady=5) 
-btn_fetch = Button(frame_btn, text="fetch", command=fetchRoomFromDatabase)
-btn_fetch.pack(side=tk.LEFT, padx='1')       
-btn_mulai = Button(frame_btn, text="routine", command=routine)
-btn_mulai.pack(side=tk.LEFT, padx='1')  
-root.mainloop()
+
+def main():
+    global root, combo_akun, input_vitalSign, btn_fetch, btn_mulai 
+    root = Tk() 
+    root.title("EMR automation")   
+    combo_akun = ttk.Combobox(root, values=list(DAFTAR_AKUN.keys()), state="readonly", width=47)
+    combo_akun.pack(padx=2, pady=2)
+    input_vitalSign = Text(root, height=10, width=50)
+    input_vitalSign.pack(padx=2, pady=2)   
+    frame_btn = Frame(root)
+    frame_btn.pack(pady=5)  
+    btn_fetch = Button(frame_btn, text="fetch", command=fetchRoomFromDatabase)
+    btn_fetch.pack(side=LEFT, padx='1')      
+    btn_mulai = Button(frame_btn, text="routine", command=routine)
+    btn_mulai.pack(side=LEFT, padx='1')  
+    root.mainloop()
+
+def check_login():
+    password = "asdasd"   
+    if entry_password.get() == password:
+        login.destroy()  
+        main()   
+    else: 
+        entry_password.delete(0, END)
+
+def check_password_length(*args):
+    if len(password_var.get()) == 6:
+        check_login() 
+
+login = Tk()
+login.title("EMR Automation")   
+password_var = StringVar() 
+entry_password = Entry(login, textvariable=password_var, show="*")
+entry_password.pack(pady=5)
+entry_password.focus() 
+password_var.trace_add("write", check_password_length)
+login.mainloop()
