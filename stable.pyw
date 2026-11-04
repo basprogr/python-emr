@@ -1,7 +1,7 @@
 import re
 import requests
 import threading
-import time
+import time 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from tkinter import *
@@ -12,7 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys 
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
- 
+  
 SUPABASE_URL = "https://qjwmhtnfowkmwoflwhzy.supabase.co/rest/v1/logbook" 
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqd21odG5mb3drbXdvZmx3aHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NjAwMTIsImV4cCI6MjEwMjUzNjAxMn0.ERWHxYn3GJJKHXJaJaZ2vnypcEM0DF8QE4DR_mjF-3s"
  
@@ -36,11 +36,12 @@ DAFTAR_AKUN = {
     "Yuni Nofita": {"username": "20210062", "pass": "1212"}
 } 
 
-def proses_satu_pasien(data_pasien, kredensial, selected_nama):    
+def proses_satu_pasien(data_pasien, kredensial_ganjil, kredensial_genap):    
     pecah = data_pasien.split('-')
     if len(pecah) < 8:
         print(f"Format salah untuk data: {data_pasien}")
         return 
+        
     nama_ruang   = pecah[0].strip()
     sistole      = pecah[1].strip()
     diastole     = pecah[2].strip()
@@ -49,6 +50,21 @@ def proses_satu_pasien(data_pasien, kredensial, selected_nama):
     status_oks   = int(pecah[5].strip())
     suhu         = pecah[6].strip()
     respirasi    = pecah[7].strip() 
+ 
+    try: 
+        kata_pertama = nama_ruang.split()[0]
+        angka_ruang = int(''.join(filter(str.isdigit, kata_pertama))) 
+        if angka_ruang == 301:
+            kredensial = kredensial_genap 
+        elif angka_ruang == 302:
+            kredensial = kredensial_ganjil 
+        else: 
+            if angka_ruang % 2 != 0:
+                kredensial = kredensial_ganjil 
+            else:
+                kredensial = kredensial_genap  
+    except (ValueError, IndexError): 
+        kredensial = kredensial_ganjil
 
     chrome_options = Options()   
     # chrome_options.add_argument("--headless=new") 
@@ -58,13 +74,11 @@ def proses_satu_pasien(data_pasien, kredensial, selected_nama):
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_experimental_option("detach", True)
     driver = webdriver.Chrome(options=chrome_options)
-
-    url1 = 'http://20.20.20.6/app.mersi-hospital/live/login'
-    url2 = "http://20.20.20.6/app.mersi-hospital/live/ri/entry/transaksi_mrs_aktif" 
-    url_logout = 'http://20.20.20.6/app.mersi-hospital/live/login/log_out'
+ 
+    url_patient_list = "http://20.20.20.6/app.mersi-hospital/live/ri/entry/transaksi_mrs_aktif"  
 
     try: 
-        driver.get(url1)   
+        driver.get('http://20.20.20.6/app.mersi-hospital/live/login')   
         username_field = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "username"))
         ) 
@@ -72,8 +86,8 @@ def proses_satu_pasien(data_pasien, kredensial, selected_nama):
         password_field = driver.find_element(By.ID, "password")
         password_field.send_keys(kredensial["pass"]) 
         password_field.send_keys(Keys.RETURN) 
-        time.sleep(2) # GANTI DENGAN MENUNGGU ELEMEN MUNCUL 
-        driver.get(url2)  
+        time.sleep(2)  
+        driver.get(url_patient_list)  
         row_target = WebDriverWait(driver, 15).until(
             EC.element_to_be_clickable((By.XPATH, f"//tr[contains(., '{nama_ruang}')]"))
         )
@@ -97,7 +111,6 @@ def proses_satu_pasien(data_pasien, kredensial, selected_nama):
         nama_pasien = "-"
         diagnosa_medis = "-"
         
-        # Get patient information from handover page 
         if "asperawat_ranap" in current_url: 
             handoverURL = current_url.replace("asperawat_ranap", "handover_dewasa1")  
             driver.get(handoverURL)  
@@ -190,16 +203,18 @@ def proses_satu_pasien(data_pasien, kredensial, selected_nama):
                 input_tgl_elem.clear()
                 input_tgl_elem.send_keys(tgl_penyerahan_val)  
                 perawat_option = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.XPATH, f"//select[@id='selperawat_1']/option[contains(text(), '{selected_nama}')]"))
+                    EC.element_to_be_clickable((By.XPATH, f"//select[@id='selperawat_1']/option[contains(text(), '{selected_nama}')]")) 
                 )
                 perawat_option.click() 
                 time.sleep(1) 
                 btn_simpan = WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable((By.ID, "save"))
                 )
+
                 btn_simpan.click() 
                 WebDriverWait(driver, 10).until(EC.staleness_of(btn_simpan)) 
-                driver.get(url_logout)   
+                
+                driver.get('http://20.20.20.6/app.mersi-hospital/live/login/log_out')   
                 username_field = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.ID, "username"))
                 ) 
@@ -210,7 +225,7 @@ def proses_satu_pasien(data_pasien, kredensial, selected_nama):
                 
                 time.sleep(2) # GANTI DENGAN MENUNGGU ELEMEN MUNCUL
  
-                driver.get(url2)  
+                driver.get(url_patient_list)  
                 row_target = WebDriverWait(driver, 15).until(
                     EC.element_to_be_clickable((By.XPATH, f"//tr[contains(., '{nama_ruang}')]"))
                 )
@@ -728,35 +743,41 @@ def proses_satu_pasien(data_pasien, kredensial, selected_nama):
                 
             except Exception as auto_err:
                 print(f"-> [WARNING AUTOMASI GAGAL] Gagal mengklik tombol copy baris pertama: {auto_err}")
-
-             
-  
+ 
     except Exception as e:
         print(f"Error pada ruang {nama_ruang}: {e}")
     finally: 
         # driver.quit()
         btn_mulai.config(state="normal") 
 
-def jalankan_semua_automasi(data_teks, kredensial, selected_nama): 
+def jalankan_semua_automasi(data_teks, kredensial_ganjil, kredensial_genap): 
     baris_data = [b.strip() for b in data_teks.strip().split('\n') if b.strip()]
     if not baris_data:
         return
  
     maxWindow = min(len(baris_data), 3)
     
-    with ThreadPoolExecutor(max_workers=maxWindow) as executor:
-        # Kirim juga selected_nama ke proses_satu_pasien lewat lambda
-        executor.map(lambda data: proses_satu_pasien(data, kredensial, selected_nama), baris_data) 
+    with ThreadPoolExecutor(max_workers=maxWindow) as executor: 
+        # Kirim kredensial ganjil dan genap ke proses_satu_pasien
+        executor.map(lambda data: proses_satu_pasien(data, kredensial_ganjil, kredensial_genap), baris_data) 
     
     root.after(0, lambda: btn_mulai.config(state="normal"))
 
 def routine():  
-    selected_nama = combo_akun.get().strip() 
+    selected_nama = combo_akun.get().strip()       # Untuk Ganjil
+    selected_nama_genap = combo_akun2.get().strip()# Untuk Genap  
+
+    # Validasi apakah kedua combobox sudah dipilih
     if not selected_nama or selected_nama not in DAFTAR_AKUN:
-        messagebox.showwarning("Peringatan", "Silakan pilih akun petugas terlebih dahulu!")
+        messagebox.showwarning("Peringatan", "Silakan pilih akun petugas untuk Ruang GANJIL terlebih dahulu!")
         return
 
-    kredensial_terpilih = DAFTAR_AKUN[selected_nama]
+    if not selected_nama_genap or selected_nama_genap not in DAFTAR_AKUN:
+        messagebox.showwarning("Peringatan", "Silakan pilih akun petugas untuk Ruang GENAP terlebih dahulu!")
+        return
+
+    kredensial_ganjil = DAFTAR_AKUN[selected_nama]
+    kredensial_genap = DAFTAR_AKUN[selected_nama_genap]
 
     try:
         btn_mulai.config(state="disabled")
@@ -819,10 +840,13 @@ def routine():
         
     except Exception as e:
         messagebox.showerror("Error", f"Terjadi kesalahan: {e}") 
-        btn_mulai.config(state="normal") # Kembalikan tombol aktif jika error
+        btn_mulai.config(state="normal") 
+        return # Tambahkan return agar thread tidak jalan jika error di tengah
  
     data_teks_baru = input_vitalSign.get("1.0", END)
-    t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks_baru, kredensial_terpilih, selected_nama))
+    
+    # Jalankan thread dengan membawa kedua kredensial
+    t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks_baru, kredensial_ganjil, kredensial_genap))
     t.start()
    
 def fetchRoomFromDatabase():     
@@ -881,22 +905,6 @@ def fetchRoomFromDatabase():
     finally:
         btn_fetch.config(state='normal')
 
-def main():
-    global root, combo_akun, input_vitalSign, btn_fetch, btn_mulai 
-    root = Tk() 
-    root.title("EMR automation")   
-    combo_akun = ttk.Combobox(root, values=list(DAFTAR_AKUN.keys()), state="readonly", width=47)
-    combo_akun.pack(padx=2, pady=2)
-    input_vitalSign = Text(root, height=10, width=50)
-    input_vitalSign.pack(padx=2, pady=2)   
-    frame_btn = Frame(root)
-    frame_btn.pack(pady=5)  
-    btn_fetch = Button(frame_btn, text="fetch", command=fetchRoomFromDatabase)
-    btn_fetch.pack(side=LEFT, padx='1')      
-    btn_mulai = Button(frame_btn, text="routine", command=routine)
-    btn_mulai.pack(side=LEFT, padx='1')  
-    root.mainloop()
-
 def check_login():
     password = "asdasd"   
     if entry_password.get() == password:
@@ -909,11 +917,206 @@ def check_password_length(*args):
     if len(password_var.get()) == 6:
         check_login() 
 
-login = Tk()
-login.title("EMR Automation")   
+def main():
+    global selected_nama, root, combo_akun, combo_akun2, input_vitalSign, btn_fetch, btn_mulai 
+  
+    root = Tk() 
+    root.title("EMR automation")   
+    root.geometry("+50+50")
+    root.after(3600000, root.destroy)
+    root.attributes('-topmost', True) 
+    ff = 'courier new'
+    fs = '10' 
+ 
+    fieldset_new = LabelFrame(root, text=" New Patient ", padx=5, pady=5)
+    fieldset_new.grid(row=0, column=0, padx=5, pady=5) 
+  
+    row1 = ttk.Frame(fieldset_new)
+    row1.pack(fill='x', side=TOP, anchor='w') 
+    pindahan_INPUT = Entry(row1, width='4') 
+    pindahan_INPUT.pack(side=LEFT, padx='1', pady='2')   
+    mr_INPUT = Entry(row1, width='8') 
+    mr_INPUT.pack(side=LEFT, padx='1', pady='2')   
+    nama_INPUT = Entry(row1, width='12') 
+    nama_INPUT.pack(side=LEFT, padx='1', pady='2')
+    usia_INPUT = Entry(row1, width='4') 
+    usia_INPUT.pack(side=LEFT, padx='1') 
+    
+    row2 = ttk.Frame(fieldset_new)
+    row2.pack(fill='x', side=TOP, anchor='w') 
+    diagnosa_INPUT = Entry(row2, width='30') 
+    diagnosa_INPUT.pack(side=LEFT, padx='1')
+    
+    row3 = ttk.Frame(fieldset_new)
+    row3.pack(fill='x', side=TOP, anchor='w') 
+    keluhan_INPUT = Entry(row3, width='30') 
+    keluhan_INPUT.pack(side=LEFT, padx='1')
+    
+    row4 = ttk.Frame(fieldset_new)
+    row4.pack(fill='x', side=TOP, anchor='w') 
+    rps_INPUT = Entry(row4, width='30') 
+    rps_INPUT.pack(side=LEFT, padx='1')
+    
+    row5 = ttk.Frame(fieldset_new)
+    row5.pack(fill='x', side=TOP, anchor='w') 
+    rpd_INPUT = Entry(row5, width='30') 
+    rpd_INPUT.pack(side=LEFT, padx='1') 
+    
+    row6 = ttk.Frame(fieldset_new)
+    row6.pack(fill='x', side=TOP, anchor='w')  
+    sistole_INPUT = Entry(row6, width='5') 
+    sistole_INPUT.pack(side=LEFT, padx='1')  
+    diastole_INPUT = Entry(row6, width='5') 
+    diastole_INPUT.pack(side=LEFT, padx='1')  
+    nadi_INPUT = Entry(row6, width='4') 
+    nadi_INPUT.pack(side=LEFT, padx='1')  
+    suhu_INPUT = Entry(row6, width='4') 
+    suhu_INPUT.pack(side=LEFT, padx='1')  
+    rr_INPUT = Entry(row6, width='4') 
+    rr_INPUT.pack(side=LEFT, padx='1')  
+    spo2_INPUT = Entry(row6, width='4') 
+    spo2_INPUT.pack(side=LEFT, padx='1')
+    
+    row7 = ttk.Frame(fieldset_new)
+    row7.pack(fill='x', side=TOP, anchor='w')   
+    diit_INPUT = Entry(row7, width=5) 
+    diit_INPUT.pack(side=LEFT, padx='1') 
+    alergi_INPUT = Entry(row7, width=24) 
+    alergi_INPUT.pack(side=LEFT, padx='1')  
+    
+    row8 = ttk.Frame(fieldset_new)
+    row8.pack(fill='x', side=TOP, anchor='w')  
+    tindakan_INPUT = Entry(row8, width=30) 
+    tindakan_INPUT.pack(side=LEFT, padx='1')  
+    
+    row9 = ttk.Frame(fieldset_new)
+    row9.pack(fill='x', side=TOP, anchor='w') 
+    dr_INPUT = Text(row9, width=30, height=2)
+    dr_INPUT.pack(side=LEFT, padx='1') 
+    
+    row10 = ttk.Frame(fieldset_new)
+    row10.pack(fill='x', side=TOP, anchor='w') 
+    terapi_INPUT = Text(row10, width=30, height=5)
+    terapi_INPUT.pack(side=LEFT, padx='1')   
+     
+    row11 = ttk.Frame(fieldset_new)
+    row11.pack(fill='x', side=TOP, anchor='w')  
+    bersihanJalanNapas_VAR = BooleanVar()  
+    bersihanJalanNapas = Checkbutton(row11, text="Bersihan Jalan Napas", variable=bersihanJalanNapas_VAR)
+    bersihanJalanNapas.pack(side=LEFT, padx='1') 
+    
+    row12 = ttk.Frame(fieldset_new)
+    row12.pack(fill='x', side=TOP, anchor='w')  
+    diare_VAR = BooleanVar()  
+    diare = Checkbutton(row12, text="Diare", variable=diare_VAR)
+    diare.pack(side=LEFT, padx='1') 
+    
+    row13 = ttk.Frame(fieldset_new)
+    row13.pack(fill='x', side=TOP, anchor='w') 
+    hipertermia_VAR = BooleanVar()  
+    hipertermia = Checkbutton(row13, text="Hipertermia", variable=hipertermia_VAR)
+    hipertermia.pack(side=LEFT, padx='1')
+    
+    row14 = ttk.Frame(fieldset_new)
+    row14.pack(fill='x', side=TOP, anchor='w')
+    hipervolemia_VAR = BooleanVar()  
+    hipervolemia = Checkbutton(row14, text="Hipervolemia", variable=hipervolemia_VAR)
+    hipervolemia.pack(side=LEFT, padx='1')            
+    
+    row15 = ttk.Frame(fieldset_new)
+    row15.pack(fill='x', side=TOP, anchor='w')
+    ketidakstabilanGD_VAR = BooleanVar()   
+    ketidakstabilanGD = Checkbutton(row15, text="Ketidakstabilan GD", variable=ketidakstabilanGD_VAR)
+    ketidakstabilanGD.pack(side=LEFT, padx='1') 
+    
+    row16 = ttk.Frame(fieldset_new)
+    row16.pack(fill='x', side=TOP, anchor='w')
+    nausea_VAR = BooleanVar() 
+    nausea = Checkbutton(row16, text="Nausea", variable=nausea_VAR)
+    nausea.pack(side=LEFT, padx='1')
+    
+    row17 = ttk.Frame(fieldset_new)
+    row17.pack(fill='x', side=TOP, anchor='w')
+    nyeriAkut_VAR = BooleanVar()
+    nyeriAkut = Checkbutton(row17, text="Nyeri Akut", variable=nyeriAkut_VAR)
+    nyeriAkut.pack(side=LEFT, padx='1')
+    
+    row18 = ttk.Frame(fieldset_new)
+    row18.pack(fill='x', side=TOP, anchor='w')
+    penurunanCurahJantung_VAR = BooleanVar()
+    penurunanCurahJantung = Checkbutton(row18, text="Penurunan Curah Jantung", variable=penurunanCurahJantung_VAR)
+    penurunanCurahJantung.pack(side=LEFT, padx='1')
+    
+    row19 = ttk.Frame(fieldset_new)
+    row19.pack(fill='x', side=TOP, anchor='w')
+    penurunanKapasitasAdaptif_VAR = BooleanVar()
+    penurunanKapasitasAdaptif = Checkbutton(row19, text="Penurunan Kapasitas Adaptif", variable=penurunanKapasitasAdaptif_VAR)
+    penurunanKapasitasAdaptif.pack(side=LEFT, padx='1') 
+    
+    row20 = ttk.Frame(fieldset_new)
+    row20.pack(fill='x', side=TOP, anchor='w')
+    polaNapas_VAR = BooleanVar()
+    polaNapas = Checkbutton(row20, text="Pola Napas", variable=polaNapas_VAR)
+    polaNapas.pack(side=LEFT, padx='1')
+    
+    row21 = ttk.Frame(fieldset_new)
+    row21.pack(fill='x', side=TOP, anchor='w')
+    resikoInfeksi_VAR = BooleanVar()
+    resikoInfeksi = Checkbutton(row21, text="Resiko Infeksi", variable=resikoInfeksi_VAR)
+    resikoInfeksi.pack(side=LEFT, padx='1')
+    
+    row22 = ttk.Frame(fieldset_new)
+    row22.pack(fill='x', side=TOP, anchor='w')
+    resikoJatuh_VAR = BooleanVar() 
+    resikoJatuh = Checkbutton(row22, text="Resiko Jatuh", variable=resikoJatuh_VAR)
+    resikoJatuh.pack(side=LEFT, padx='1')
+    
+    # row24 = ttk.Frame(fieldset_new)
+    # row24.pack(fill='x', side=TOP, anchor='w')
+    # scan_BT = Button(row24, text="scan-i", command=lambda: scan('i'))
+    # scan_BT.pack(side=LEFT, padx='1')  
+    # scan_transfer_BT = Button(row24, text="scan-t", command=lambda: scan('t'))
+    # scan_transfer_BT.pack(side=LEFT, padx='1')
+    
+    # row25 = ttk.Frame(fieldset_new)
+    # row25.pack(fill='x', side=TOP, anchor='w')
+    # auto_dewasa_BT = Button(row25, text="auto-d", command=lambda: automate('d')) 
+    # auto_dewasa_BT.pack(side=LEFT, padx='1')
+    # auto_geriatri_BT = Button(row25, text="auto-g", command=lambda: automate('g')) 
+    # auto_geriatri_BT.pack(side=LEFT, padx='1')
+    # asesmen_dewasa_BT = Button(row25, text="akrid", command=lambda: partial_askep('d')) 
+    # asesmen_dewasa_BT.pack(side=LEFT, padx='1')
+    # asesmen_geriatri_BT = Button(row25, text="akrig", command=lambda: partial_askep('g')) 
+    # asesmen_geriatri_BT.pack(side=LEFT, padx='1')
+
+    # =============================================================================================== #
+ 
+    fieldset_routine = LabelFrame(root, text=" Routine ", padx=5, pady=5)
+    fieldset_routine.grid(row=0, column=1, sticky="n", padx=5, pady=5)  
+
+    combo_akun = ttk.Combobox(fieldset_routine, values=list(DAFTAR_AKUN.keys()), state="readonly")
+    combo_akun.grid(row=0, column=0, sticky="w") 
+    
+    combo_akun2 = ttk.Combobox(fieldset_routine, values=list(DAFTAR_AKUN.keys()), state="readonly")
+    combo_akun2.grid(row=1, column=0, sticky="w") 
+
+    input_vitalSign = Text(fieldset_routine, height=10, width=35, font=('Courier New', '10'))
+    input_vitalSign.grid(row=2, column=0, sticky="w") 
+
+    frame_btn = Frame(fieldset_routine)
+    frame_btn.grid(row=3, column=0, sticky="w") 
+    btn_fetch = Button(frame_btn, text="fetch", command=fetchRoomFromDatabase)
+    btn_fetch.pack(side=LEFT, padx='1')      
+    btn_mulai = Button(frame_btn, text="routine", command=routine)
+    btn_mulai.pack(side=LEFT, padx='1')  
+
+    root.mainloop()
+ 
+login = Tk()  
 password_var = StringVar() 
 entry_password = Entry(login, textvariable=password_var, show="*")
-entry_password.pack(pady=5)
+entry_password.pack(padx=5, pady=5)
 entry_password.focus() 
 password_var.trace_add("write", check_password_length)
 login.mainloop()
+ 
