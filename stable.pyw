@@ -36,7 +36,7 @@ DAFTAR_AKUN = {
     "Yuni Nofita": {"username": "20210062", "pass": "1212"}
 } 
 
-def proses_satu_pasien(data_pasien, kredensial_ganjil, kredensial_genap):    
+def proses_satu_pasien(data_pasien, kredensial_ganjil, kredensial_genap, nama_perawat_ganjil, nama_perawat_genap):    
     pecah = data_pasien.split('-')
     if len(pecah) < 8:
         print(f"Format salah untuk data: {data_pasien}")
@@ -54,18 +54,24 @@ def proses_satu_pasien(data_pasien, kredensial_ganjil, kredensial_genap):
     try: 
         kata_pertama = nama_ruang.split()[0]
         angka_ruang = int(''.join(filter(str.isdigit, kata_pertama))) 
+         
         if angka_ruang == 301:
             kredensial = kredensial_genap 
+            selected_nama = nama_perawat_genap  
         elif angka_ruang == 302:
             kredensial = kredensial_ganjil 
+            selected_nama = nama_perawat_ganjil 
         else: 
             if angka_ruang % 2 != 0:
                 kredensial = kredensial_ganjil 
+                selected_nama = nama_perawat_ganjil
             else:
                 kredensial = kredensial_genap  
+                selected_nama = nama_perawat_genap
     except (ValueError, IndexError): 
         kredensial = kredensial_ganjil
-
+        selected_nama = nama_perawat_ganjil
+ 
     chrome_options = Options()   
     # chrome_options.add_argument("--headless=new") 
     chrome_options.add_argument("--no-sandbox")
@@ -747,31 +753,32 @@ def proses_satu_pasien(data_pasien, kredensial_ganjil, kredensial_genap):
     except Exception as e:
         print(f"Error pada ruang {nama_ruang}: {e}")
     finally: 
-        # driver.quit()
+        driver.quit()
         btn_mulai.config(state="normal") 
 
-def jalankan_semua_automasi(data_teks, kredensial_ganjil, kredensial_genap): 
+def jalankan_semua_automasi(data_teks, kredensial_ganjil, kredensial_genap, nama_perawat_ganjil, nama_perawat_genap): 
     baris_data = [b.strip() for b in data_teks.strip().split('\n') if b.strip()]
     if not baris_data:
         return
  
     maxWindow = min(len(baris_data), 3)
     
-    with ThreadPoolExecutor(max_workers=maxWindow) as executor: 
-        # Kirim kredensial ganjil dan genap ke proses_satu_pasien
-        executor.map(lambda data: proses_satu_pasien(data, kredensial_ganjil, kredensial_genap), baris_data) 
+    with ThreadPoolExecutor(max_workers=maxWindow) as executor:  
+        executor.map(
+            lambda data: proses_satu_pasien(
+                data, kredensial_ganjil, kredensial_genap, nama_perawat_ganjil, nama_perawat_genap
+            ), 
+            baris_data
+        ) 
     
     root.after(0, lambda: btn_mulai.config(state="normal"))
 
 def routine():  
-    selected_nama = combo_akun.get().strip()       # Untuk Ganjil
-    selected_nama_genap = combo_akun2.get().strip()# Untuk Genap  
-
-    # Validasi apakah kedua combobox sudah dipilih
+    selected_nama = combo_akun.get().strip()     
+    selected_nama_genap = combo_akun2.get().strip()    
     if not selected_nama or selected_nama not in DAFTAR_AKUN:
         messagebox.showwarning("Peringatan", "Silakan pilih akun petugas untuk Ruang GANJIL terlebih dahulu!")
-        return
-
+        return   
     if not selected_nama_genap or selected_nama_genap not in DAFTAR_AKUN:
         messagebox.showwarning("Peringatan", "Silakan pilih akun petugas untuk Ruang GENAP terlebih dahulu!")
         return
@@ -844,9 +851,11 @@ def routine():
         return # Tambahkan return agar thread tidak jalan jika error di tengah
  
     data_teks_baru = input_vitalSign.get("1.0", END)
-    
-    # Jalankan thread dengan membawa kedua kredensial
-    t = threading.Thread(target=jalankan_semua_automasi, args=(data_teks_baru, kredensial_ganjil, kredensial_genap))
+     
+    t = threading.Thread(
+        target=jalankan_semua_automasi, 
+        args=(data_teks_baru, kredensial_ganjil, kredensial_genap, selected_nama, selected_nama_genap)
+    )
     t.start()
    
 def fetchRoomFromDatabase():     
